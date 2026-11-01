@@ -1,19 +1,24 @@
 package com.example.crud.controller;
 
+import java.util.List;
+
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.crud.helper.ApiResponse;
 import com.example.crud.model.User;
+import com.example.crud.model.dto.response.UserResponseDTO;
 import com.example.crud.service.UserService;
 
 import jakarta.validation.Valid;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import lombok.RequiredArgsConstructor;
 
-@RestController 
+@RestController
 @RequiredArgsConstructor
 public class UserController {
 
@@ -21,11 +26,19 @@ public class UserController {
 
     @GetMapping("/users")
     public ResponseEntity<?> getUser() {
-        return ApiResponse.success(userService.getUsers());
+        List<UserResponseDTO> dto = this.userService.fetchAllUser();
+        return ApiResponse.success(dto);
     }
 
     @PostMapping("/users")
-    public ResponseEntity<?> postUser(@Valid @RequestBody User user) {
-        return ApiResponse.created(userService.createUser(user));
+        public ResponseEntity<?> postUser(@Valid @RequestBody User user){
+            UserResponseDTO dto = this.userService.createUser(user);
+            return ApiResponse.success(dto);
+    }
+
+    @PutMapping("/users/{id}")
+    public ResponseEntity<?> updateUser(@PathVariable("id") Long id, @Valid @RequestBody User user) {
+        UserResponseDTO dto = this.userService.updateUser(id, user);
+        return ApiResponse.success(dto);
     }
 }

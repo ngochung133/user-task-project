@@ -43,6 +43,16 @@ class GlobalExceptionHandlerTests {
     }
 
     @Test
+    void unexpectedExceptionReturnsGeneric500WithoutInternalDetails() throws Exception {
+        mvc.perform(get("/unexpected-error"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(content().string(containsString("\"statusCode\":500")))
+                .andExpect(content().string(containsString("Đã xảy ra lỗi hệ thống, vui lòng thử lại sau")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString("internal-database-detail"))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString("IllegalStateException"))));
+    }
+
+    @Test
     void invalidPathParameterReturnsItsNameAndExpectedType() throws Exception {
         mvc.perform(get("/input/abc"))
                 .andExpect(status().isBadRequest())
@@ -53,6 +63,11 @@ class GlobalExceptionHandlerTests {
 
     @RestController
     static class InputController {
+        @GetMapping("/unexpected-error")
+        public void unexpectedError() {
+            throw new IllegalStateException("internal-database-detail");
+        }
+
         @PostMapping("/input")
         public void validate(@Valid @RequestBody User user) {
         }

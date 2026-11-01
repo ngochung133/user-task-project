@@ -4,7 +4,6 @@ package com.example.exception;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -45,4 +44,10 @@ public class GlobalExceptionHandler {
             log.warn("ResourceAlreadyExistException {}",ex.getMessage());
             return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.conflict(ex.getMessage()));
         }
+
+     @ExceptionHandler(Exception.class)
+     public ResponseEntity<ApiResponse<Void>> handleGeneral(Exception ex) {
+        log.error("Unexpected exception", ex);
+        return ApiResponse.error("Đã xảy ra lỗi hệ thống, vui lòng thử lại sau");
+     }
 }
