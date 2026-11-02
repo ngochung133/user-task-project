@@ -23,4 +23,6 @@ public class UserRequestDTO {
     @NotBlank (message = "password can not be null")
     @Size(min = 6, message = "password length min = 6")
     private String password;
+
+    
 }
