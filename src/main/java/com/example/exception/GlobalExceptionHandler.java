@@ -5,6 +5,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -44,6 +45,11 @@ public class GlobalExceptionHandler {
             log.warn("ResourceAlreadyExistException {}",ex.getMessage());
             return ApiResponse.conflict(ex.getMessage());
         }
+
+     @ExceptionHandler(BadCredentialsException.class)
+     public ResponseEntity<?> handleBadCredentials(BadCredentialsException ex) {
+        return ApiResponse.unauthorized("Email hoặc mật khẩu không chính xác");
+     }
 
      @ExceptionHandler(Exception.class)
      public ResponseEntity<ApiResponse<Void>> handleGeneral(Exception ex) {
