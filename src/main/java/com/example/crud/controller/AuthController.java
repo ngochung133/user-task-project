@@ -18,6 +18,9 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
 
 
 @RestController 
@@ -31,6 +34,11 @@ public class AuthController {
    @Value("${jwt.expiration}")
     private long jwtExpiration;
 
+    @GetMapping("/")
+    public String homepage() {
+        return "Hello Web";
+    }
+    
 
     @PostMapping("/login")
     public ResponseEntity<?> postLogin (@Valid @RequestBody LoginRequestDTO login) {
@@ -40,6 +48,7 @@ public class AuthController {
     //authencation chứa principal: người dùng là ai, thường là UserDetails hoặc email.
 
     Authentication authentication = authenticationManager.authenticate(
+        //UsernamePasswordAuthenticationToken tại đây là object Java chứa thông tin cần xác thực,
         new UsernamePasswordAuthenticationToken(
             login.getEmail(),
              login.getPassword()));
