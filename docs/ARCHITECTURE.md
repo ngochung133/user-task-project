@@ -9,40 +9,31 @@
 ```text
 src/main/java/com/example/crud/
 ├── CrudApplication.java
-├── global/
-│   ├── config/              # SecurityConfig
-│   ├── exception/           # Exception và advice dùng chung
-│   └── shared/              # ApiResponse
-└── modules/
-    ├── auth/
-    │   ├── controller/      # AuthController
-    │   ├── dto/             # Login request và response
-    │   ├── security/        # UserDetailsService
-    │   └── service/         # JwtService
-    └── user/
-        ├── controller/      # UserController
-        ├── dto/             # User request và response
-        ├── entity/          # User
-        ├── mapper/          # UserMapper
-        ├── repository/      # UserRepository
-        └── service/
-            ├── UserService.java
-            └── impl/
-                └── UserServiceImpl.java
+├── config/                  # SecurityConfig
+├── dto/                     # ApiResponse
+├── exception/               # Exception và advice dùng chung
+├── security/                # UserDetailsService
+└── feature/
+    ├── auth/                # AuthController, JwtService
+    │   └── dto/
+    └── user/                # User, UserController, UserRepository, UserMapper
+        ├── UserService.java
+        ├── UserServiceImpl.java
+        └── dto/
 ```
 
-Mỗi module tạo package theo nhu cầu thực tế. Test mirror package tương ứng trong `src/test/java`. Dùng `global/util/` khi có utility thực sự dùng chung.
+Test dưới `src/test/java/com/example/crud/` theo cây cũ. `controller/` chứa integration test Auth và User, `service/` chứa unit test, `helper/` chứa fixture và `config/` chứa cấu hình MySQL Testcontainers. [ADR-003](decisions/003-feature-package-layout.md)
 
 ## Mở rộng theo roadmap
 
-Permission, Company, Role và File sẽ nằm trong các package riêng dưới `modules/` khi được triển khai. Permission và Company là hai module độc lập. Role quản lý liên kết tới Permission. User tham chiếu Company và Role. Auth dùng dữ liệu User để xác thực. Khi RBAC được triển khai, tầng security điều phối kiểm tra quyền qua hợp đồng của module. Giữ chiều phụ thuộc một chiều và tránh vòng lặp. [Schema đích](DATABASE.md)
+Permission, Company, Role và File sẽ nằm trong các package riêng dưới `feature/` khi được triển khai. Permission và Company là hai feature độc lập. Role quản lý liên kết tới Permission. User tham chiếu Company và Role. Auth dùng dữ liệu User để xác thực. Khi RBAC được triển khai, tầng security điều phối kiểm tra quyền qua hợp đồng của feature. Giữ chiều phụ thuộc một chiều và tránh vòng lặp. [Schema đích](DATABASE.md)
 
 ## Tách service thành interface và implementation
 
-1. Đưa các chữ ký nghiệp vụ mà caller cần vào interface trong `service/`. [UserService](../src/main/java/com/example/crud/modules/user/service/UserService.java)
-2. Đưa nghiệp vụ và dependency vào class `implements` trong `service/impl/`. Đặt `@Service` trên class và `@Override` trên các phương thức thực thi hợp đồng. Dùng mapper cho phần chuyển entity sang response khi được tái sử dụng. [UserServiceImpl](../src/main/java/com/example/crud/modules/user/service/impl/UserServiceImpl.java) · [UserMapper](../src/main/java/com/example/crud/modules/user/mapper/UserMapper.java)
-3. Khai báo kiểu interface trong field và constructor của controller. Spring tiêm implementation khi có đúng một bean phù hợp. [UserController](../src/main/java/com/example/crud/modules/user/controller/UserController.java)
-4. Trong unit test, `@InjectMocks` khởi tạo class implementation và truyền các dependency đã mock. Integration test kiểm tra việc wiring thông qua HTTP. [UserServiceImplTest](../src/test/java/com/example/crud/modules/user/service/impl/UserServiceImplTest.java)
+1. Đưa các chữ ký nghiệp vụ mà caller cần vào interface trong package feature. [UserService](../src/main/java/com/example/crud/feature/user/UserService.java)
+2. Đưa nghiệp vụ và dependency vào class `implements` cùng package. Đặt `@Service` trên class và `@Override` trên các phương thức thực thi hợp đồng. Dùng mapper cho phần chuyển entity sang response khi được tái sử dụng. [UserServiceImpl](../src/main/java/com/example/crud/feature/user/UserServiceImpl.java) · [UserMapper](../src/main/java/com/example/crud/feature/user/UserMapper.java)
+3. Khai báo kiểu interface trong field và constructor của controller. Spring tiêm implementation khi có đúng một bean phù hợp. [UserController](../src/main/java/com/example/crud/feature/user/UserController.java)
+4. Trong unit test, `@InjectMocks` khởi tạo class implementation và truyền các dependency đã mock. Integration test kiểm tra việc wiring thông qua HTTP. [UserServiceTest](../src/test/java/com/example/crud/service/UserServiceTest.java)
 
 ## Xác thực và phân quyền
 

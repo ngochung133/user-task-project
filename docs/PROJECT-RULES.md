@@ -2,9 +2,14 @@
 
 Áp dụng cho mã mới và phần được yêu cầu chuyển đổi. Dùng mã và test của repo này để xác nhận hành vi hiện tại. Các thiết kế mang nhãn **Đích** hoặc **Đề xuất** chỉ mô tả công việc tương lai. Khi tài liệu lệch với mã hoặc ADR, ghi rõ tác động và chốt phần ảnh hưởng đến thay đổi trước khi triển khai.
 
+## Học và thực hành cùng AI
+
+- Người học tự sửa mã và chạy test. AI giải thích kiến thức, đưa ví dụ trong chat, chỉ cách kiểm tra và review khi được yêu cầu. Khi áp dụng skill, giữ phạm vi hướng dẫn trừ khi người học giao rõ việc sửa file.
+- Khi gặp kỹ thuật thực tế liên quan đến task, giải thích bằng tình huống trong repo. Chỉ bổ sung vào quy ước những điểm có điều kiện áp dụng cụ thể và có thể kiểm tra.
+
 ## Package và đặt tên
 
-- Dùng `com.example.crud.modules.<module>` cho module mới. Phân lớp trong module bằng `controller/`, `dto/`, `entity/`, `repository/`, `service/` và `mapper/` khi cần. Đặt interface trong `service/` và implementation trong `service/impl/`. Đặt thành phần dùng chung ở `global/config/`, `global/exception/`, `global/shared/` hoặc `global/util/`. Xem [cây package và ví dụ service](ARCHITECTURE.md).
+- Dùng `com.example.crud.feature.<feature>` cho feature mới. Đặt controller, entity, repository, service interface và implementation trực tiếp trong package feature. Đặt DTO trong `feature/<feature>/dto/`. Đặt thành phần dùng chung ở `config/`, `dto/`, `exception/` và `security/` cấp ứng dụng. Xem [cây package và ví dụ service](ARCHITECTURE.md).
 - Dùng `<Feature>Controller`, `<Feature>Service`, `<Feature>ServiceImpl`, `<Feature>Repository`, `<Action><Feature>Request` và `<Feature>Response`. Tên Java dùng PascalCase cho lớp, camelCase cho biến/phương thức, UPPER_SNAKE_CASE cho hằng số và snake_case cho bảng/cột.
 - Constructor injection tường minh với field `final` cho component mới. Giữ Lombok đang dùng trong các lớp cũ cho tới khi task yêu cầu chuyển đổi. Tránh `@Data` trên JPA entity.
 
@@ -24,6 +29,7 @@
 
 ## Kiểm thử và tài liệu
 
-- Viết unit test JUnit/Mockito cho nghiệp vụ và integration test MockMvc cho hợp đồng HTTP. Đặt tên test theo hành vi, thêm `@DisplayName`. Bao phủ thành công, input lỗi, dữ liệu thiếu/trùng và quyền truy cập khi áp dụng. Kiểm tra cả trạng thái lưu nếu endpoint ghi dữ liệu.
+- Dưới `src/test/java/com/example/crud/`, đặt integration test HTTP trong `controller/`, unit test nghiệp vụ trong `service/`, helper trong `helper/` và cấu hình test trong `config/`. Dùng JUnit/Mockito và MockMvc. Đặt tên test theo hành vi, thêm `@DisplayName`. Bao phủ thành công, input lỗi, dữ liệu thiếu/trùng và quyền truy cập khi áp dụng. Kiểm tra cả trạng thái lưu nếu endpoint ghi dữ liệu.
 - Integration test dùng profile `test`, MySQL Testcontainers qua `MySqlTestConfiguration` và Docker. Chỉ dùng `create-drop` trên schema test cô lập. Cấm H2 hoặc chuyển test sang datasource mặc định khi Docker thiếu. Chạy `./mvnw test` khi đủ điều kiện và báo đúng phần chạy được.
+- Khi mục tiêu của integration test là xác minh commit hoặc rollback của service, gọi service qua bean Spring hoặc qua HTTP từ bên ngoài transaction do test quản lý. Kiểm tra trạng thái DB sau khi lời gọi kết thúc và dọn dữ liệu test riêng.
 - Cập nhật [API_SPEC.md](API_SPEC.md) và [DATABASE.md](DATABASE.md) theo hợp đồng đã thay đổi. Ghi `CONTEXT.md` cho module có quyết định đáng lưu và ADR cho thay đổi kiến trúc. Ghi tiến độ bằng `$update-status` khi được yêu cầu hoặc khi workflow feature cần.
