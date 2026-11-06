@@ -11,15 +11,29 @@
 
 - Dùng `com.example.crud.feature.<feature>` cho feature mới. Đặt controller, entity, repository, service interface và implementation trực tiếp trong package feature. Đặt DTO trong `feature/<feature>/dto/`. Đặt thành phần dùng chung ở `config/`, `dto/`, `exception/` và `security/` cấp ứng dụng. Xem [cây package và ví dụ service](ARCHITECTURE.md).
 - Dùng `<Feature>Controller`, `<Feature>Service`, `<Feature>ServiceImpl`, `<Feature>Repository`, `<Action><Feature>Request` và `<Feature>Response`. Tên Java dùng PascalCase cho lớp, camelCase cho biến/phương thức, UPPER_SNAKE_CASE cho hằng số và snake_case cho bảng/cột.
-- Constructor injection tường minh với field `final` cho component mới. Giữ Lombok đang dùng trong các lớp cũ cho tới khi task yêu cầu chuyển đổi. Tránh `@Data` trên JPA entity.
+- Dùng constructor injection với field `final` cho component mới. Dùng Lombok `@RequiredArgsConstructor` khi constructor chỉ nhận dependency và viết constructor tường minh khi cần logic khởi tạo riêng.
+- Với DTO dạng class, dùng Lombok `@Getter` và `@Setter` theo nhu cầu đọc hoặc gán field. Với request dùng setter để nhận JSON, dùng `@NoArgsConstructor` khi cần khai báo constructor rỗng.
+- Với JPA entity, dùng `@Getter` và `@NoArgsConstructor(access = AccessLevel.PROTECTED)`. Viết constructor và phương thức nghiệp vụ cho các thao tác tạo hoặc cập nhật. Giới hạn setter ở từng field thực sự cần gán và tránh `@Data` trên entity.
 
 ## HTTP và nghiệp vụ
 
 - Controller nhận request, dùng `@Valid` với `@RequestBody`, gọi service interface và trả `ResponseEntity<ApiResponse<T>>` cho API JSON mới. Dùng factory và JSON envelope của repo. Kiểm tra status và field thực tế trước khi sửa endpoint hiện hữu.
-- DTO mới dùng Java `record` và request có Jakarta Validation. Service trả DTO, dùng mapper của module khi cần tái sử dụng logic ánh xạ. Loại mật khẩu, hash và khóa ký khỏi response và log. Chỉ trả token qua hợp đồng Auth được định nghĩa và luôn loại token khỏi log.
+- DTO mới mặc định dùng Java `record`. Đặt Jakarta Validation trên component của request. Service trả DTO, dùng mapper của module khi cần tái sử dụng logic ánh xạ. Loại mật khẩu, hash và khóa ký khỏi response và log. Chỉ trả token qua hợp đồng Auth được định nghĩa và luôn loại token khỏi log.
 - Service giữ nghiệp vụ và đặt `@Transactional` ở phương thức ghi. Repository dùng Spring Data derived query hoặc JPQL khi cần, trả `Optional<T>` cho truy vấn đơn có thể rỗng.
 - API HR mới dùng tiền tố `/api/v1`. Thay đổi route, HTTP status, quyền truy cập hoặc response shape của API hiện có cần phạm vi và test tương thích rõ ràng. [Hợp đồng API](API_SPEC.md)
 - Dùng exception nghiệp vụ và advice dùng chung. Trả `400` cho input không hợp lệ, `404` cho tài nguyên không tồn tại, `409` cho xung đột, `401` cho thiếu hoặc sai xác thực và `403` khi người đã xác thực thiếu quyền. Giữ stack trace và chi tiết SQL ở log nội bộ.
+
+## Permission
+
+Áp dụng khi triển khai module Permission theo [API đích](API_SPEC.md#api-hr-đích) và [schema đích](DATABASE.md#mô-hình-hr-đích).
+
+- Dùng request và response record riêng. Response có thể dùng `static fromEntity()` để ánh xạ trực tiếp các trường đã tải. `PUT /api/v1/permissions/{id}` lấy ID từ URL. Request body chỉ chứa các trường cần cập nhật.
+- Bỏ khoảng trắng hai đầu và viết hoa `method`, `module` với `Locale.ROOT` trước khi kiểm tra allowlist và lưu. Allowlist ban đầu cho `method` gồm `GET`, `POST`, `PUT`, `PATCH`, `DELETE`. Với `module`, dùng mã feature `AUTH`, `USER`, `COMPANY`, `PERMISSION`, `ROLE`. Trả `400` cho giá trị ngoài allowlist. Lưu dưới dạng chuỗi.
+- `apiPath` là mẫu đường dẫn ứng dụng bắt đầu bằng `/`, ví dụ `/api/v1/users/{id}`. Bỏ khoảng trắng hai đầu, giữ nguyên hoa/thường và từ chối URL đầy đủ, query string hoặc fragment. Dùng cùng giá trị đã chuẩn hóa khi kiểm tra trùng và lưu. Đặt unique constraint `(api_path, method)` ở MySQL và trả `409` khi trùng, kể cả khi hai yêu cầu ghi đồng thời. Dùng collation phù hợp với quy tắc so khớp đường dẫn.
+- Dùng `Instant` cho `createdAt` và `updatedAt`, để Hibernate quản lý timestamp và trả thời gian UTC trong JSON.
+- List mặc định sắp xếp theo `id ASC`. Nếu cho sắp xếp theo trường khác, dùng `id` làm tiêu chí phụ để giữ thứ tự ổn định giữa các trang.
+- Khi triển khai Role, để Role sở hữu quan hệ ManyToMany qua bảng `role_permission`, với khóa chính ghép và FK tới hai bảng. Kiểm tra tất cả Permission ID trước khi lưu danh sách trong cùng giao dịch. Tránh cascade xóa thực thể ở đầu kia. Chốt cách xử lý Permission còn được gán trước khi triển khai DELETE.
+- Dùng MySQL Testcontainers qua `MySqlTestConfiguration`. Kiểm tra method/module sai trả `400`, dữ liệu trùng sau chuẩn hóa trả `409`, `PUT` dùng ID trên URL, audit timestamp đọc lại đúng và phân trang giữ thứ tự khi giá trị sort bị trùng. Khi kiểm thử liên kết Role, xác nhận một Permission ID không tồn tại khiến toàn bộ thao tác gán thất bại.
 
 ## Dữ liệu và bảo mật
 

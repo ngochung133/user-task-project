@@ -18,7 +18,7 @@ Cập nhật 2026-11-05. Baseline lấy từ mã và test trong repo `crud`.
 ## Ghi nhận phiên 2026-11-05
 
 - Đã đối chiếu diff và mã: Auth/User ở `feature/`; thành phần dùng chung ở `config/`, `dto/`, `exception/`, `security/`. Test ở `controller/`, `service/`, `helper/`, `config/`. Thay đổi package và tài liệu tương ứng đang có trong working tree, chưa commit. [ADR-003](decisions/003-feature-package-layout.md) đã chấp nhận bố cục này.
-- Hợp đồng hiện tại vẫn dùng `/users` và `/auth/login`; tạo User public, các thao tác đọc/sửa/xóa User yêu cầu xác thực JWT, chưa phân quyền theo dữ liệu. Quy ước cho API HR mới là `/api/v1`, request DTO dạng record, validation và quyền theo hợp đồng được chốt; đây chưa phải hợp đồng đã triển khai cho User/Auth hiện hữu.
+- Hợp đồng hiện tại vẫn dùng `/users` và `/auth/login`. Tạo User public. Đọc, sửa và xóa User yêu cầu JWT. Phân quyền theo dữ liệu và tiền tố `/api/v1` thuộc API HR đích. Quy ước DTO và validation nằm trong [PROJECT-RULES.md](PROJECT-RULES.md).
 - Kiểm chứng phiên này: đã kiểm tra tĩnh mã, test và báo cáo XML trong `target/surefire-reports/`. Chạy `./mvnw -o test` thất bại trước khi chạy test vì không mở được file lock trong `~/.m2/repository/.locks/`. Chưa xác nhận lại suite trong phiên này; số 28 test thành công ở trên là kết quả báo cáo có sẵn.
 - Chưa bắt đầu các mục roadmap 2–6. ADR refresh token và upload vẫn là đề xuất. Task tiếp theo là nền tảng bảo mật và dữ liệu: chốt cách đưa secret ra ngoài cấu hình, chính sách tạo/sửa User và kế hoạch unique email/migration trước khi triển khai phần phụ thuộc.
 
