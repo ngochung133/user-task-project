@@ -1,6 +1,6 @@
 ---
 name: update-status
-description: Use when asked to record CRUD HR project status or when a feature workflow requires a status update.
+description: Use when asked to record hr-management project status or when a feature workflow requires a status update.
 ---
 
 # Cập nhật tiến độ HR

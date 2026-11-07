@@ -1,6 +1,6 @@
 ---
 name: write-context
-description: Use when creating or updating implementation context for an existing CRUD HR feature module.
+description: Use when creating or updating implementation context for an existing hr-management feature module.
 ---
 
 # Ghi CONTEXT của module

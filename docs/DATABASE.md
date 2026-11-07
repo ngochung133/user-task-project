@@ -2,7 +2,7 @@
 
 ## Hiện trạng từ mapping JPA
 
-`User` map vào bảng `users` với `id` kiểu Long/IDENTITY, `name`, `email`, `password` và `address`. Service kiểm tra email trùng và mã hóa mật khẩu bằng BCrypt. Mapping hiện chưa khai báo unique constraint cho email, audit timestamp hay quan hệ HR. Schema của một database đã chạy có thể khác mapping hiện tại, nên kiểm tra schema thật trước khi viết migration. [User.java](../src/main/java/com/example/crud/feature/user/User.java) · [UserServiceImpl.java](../src/main/java/com/example/crud/feature/user/UserServiceImpl.java)
+`User` map vào bảng `users` với `id` kiểu Long/IDENTITY, `name`, `email`, `password` và `address`. Service kiểm tra email trùng và mã hóa mật khẩu bằng BCrypt. Mapping hiện chưa khai báo unique constraint cho email, audit timestamp hay quan hệ HR. Schema của một database đã chạy có thể khác mapping hiện tại, nên kiểm tra schema thật trước khi viết migration. [User.java](../src/main/java/com/example/hrmanagement/feature/user/User.java) · [UserServiceImpl.java](../src/main/java/com/example/hrmanagement/feature/user/UserServiceImpl.java)
 
 Profile mặc định dùng Hibernate `ddl-auto=update`. Test dùng `create-drop` trên MySQL container. Repo chưa có migration versioned. [Cấu hình mặc định](../src/main/resources/application.properties) · [Cấu hình test](../src/test/resources/application-test.properties)
 

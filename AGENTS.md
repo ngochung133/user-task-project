@@ -1,6 +1,6 @@
-# CRUD · HR Management API
+# HR Management API
 
-Mục tiêu phát triển của repo `crud` là REST API quản lý nhân sự với User, Company, Role, Permission, Auth và RBAC. Các tài liệu Task Manager cũ là tư liệu học tập. Dùng roadmap HR trong [PROJECT-STATUS.md](docs/PROJECT-STATUS.md) để chọn công việc tiếp theo.
+Mục tiêu phát triển của repo `hr-management` là REST API quản lý nhân sự với User, Company, Role, Permission, Auth và RBAC. Các tài liệu Task Manager cũ là tư liệu học tập. Dùng roadmap HR trong [PROJECT-STATUS.md](docs/PROJECT-STATUS.md) để chọn công việc tiếp theo.
 
 ## Trước khi làm việc
 

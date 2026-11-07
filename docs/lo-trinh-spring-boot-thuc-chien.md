@@ -13,7 +13,7 @@
 | Unit, web, repository, integration test | Có danh sách loại test ở trang 10-11 | Chỉ có `contextLoads()` | Ma trận test, ca biên, cơ sở dữ liệu MySQL thật bằng Testcontainers |
 | Migration, cấu hình môi trường, CI, vận hành | Có nhắc ngắn | Chưa triển khai | Bài tập Flyway, profiles, secrets, Actuator, CI và README |
 
-Repo hiện không biên dịch được: `UserController` và `UserService` viết dở; `User` có `@NotBlank(` chưa đóng; `UserRepository.exexistsByEmail` sai tên; `@NoArgsConstructor` không tiêm được `final UserRepository`. `GlobalExceptionHandler` nằm trong `com.example.exception`, ngoài cây package `com.example.crud` của `@SpringBootApplication`; kiểu trả về còn lồng `ResponseEntity`. Hai DTO và `AuthController` rỗng. `application.properties` chưa có datasource. Không sửa mọi thứ một lần: hoàn thành từng bài và giữ build xanh.
+Repo hiện không biên dịch được: `UserController` và `UserService` viết dở; `User` có `@NotBlank(` chưa đóng; `UserRepository.exexistsByEmail` sai tên; `@NoArgsConstructor` không tiêm được `final UserRepository`. `GlobalExceptionHandler` nằm trong `com.example.exception`, ngoài cây package `com.example.hrmanagement` của `@SpringBootApplication`; kiểu trả về còn lồng `ResponseEntity`. Hai DTO và `AuthController` rỗng. `application.properties` chưa có datasource. Không sửa mọi thứ một lần: hoàn thành từng bài và giữ build xanh.
 
 ## 2. Cách học và thứ tự
 
@@ -33,7 +33,7 @@ Giữ thay đổi thành các commit nhỏ. Nếu build còn đỏ vì một fil
 
 ## Bài 0 - Cứu bộ khung và hiểu Dependency Injection
 
-**Đầu ra:** `./mvnw -q -DskipTests compile` thành công; ứng dụng khởi động được với MySQL local hoặc test profile. Sửa cú pháp ở ba file đang dở; đổi repository method thành `existsByEmailIgnoreCase`; dùng constructor injection rõ ràng; đưa exception/handler vào package con của `com.example.crud` hoặc cấu hình quét có chủ đích. Chọn một kiểu response lỗi, không lồng `ResponseEntity`. Rà dependency: OAuth2 Authorization Server dùng để *phát hành* token theo OAuth2; đừng giữ starter này chỉ vì API sẽ *xác minh* bearer JWT.
+**Đầu ra:** `./mvnw -q -DskipTests compile` thành công; ứng dụng khởi động được với MySQL local hoặc test profile. Sửa cú pháp ở ba file đang dở; đổi repository method thành `existsByEmailIgnoreCase`; dùng constructor injection rõ ràng; đưa exception/handler vào package con của `com.example.hrmanagement` hoặc cấu hình quét có chủ đích. Chọn một kiểu response lỗi, không lồng `ResponseEntity`. Rà dependency: OAuth2 Authorization Server dùng để *phát hành* token theo OAuth2; đừng giữ starter này chỉ vì API sẽ *xác minh* bearer JWT.
 
 **Tự kiểm tra:** build sạch; `contextLoads` chạy với test datasource; có thể chỉ ra bean nào được Spring tạo và service nhận repository bằng cách nào. **Câu hỏi:** Vì sao `final UserRepository` với `@NoArgsConstructor` không phải constructor injection?
 

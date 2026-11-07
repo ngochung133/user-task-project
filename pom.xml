@@ -10,10 +10,10 @@
 		<relativePath /> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.example</groupId>
-	<artifactId>crud</artifactId>
+	<artifactId>hr-management</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name />
-	<description />
+	<name>hr-management</name>
+	<description>REST API quản lý nhân sự</description>
 	<url />
 	<licenses>
 		<license />

@@ -9,7 +9,7 @@
 
 ## Package và đặt tên
 
-- Dùng `com.example.crud.feature.<feature>` cho feature mới. Đặt controller, entity, repository, service interface và implementation trực tiếp trong package feature. Đặt DTO trong `feature/<feature>/dto/`. Đặt thành phần dùng chung ở `config/`, `dto/`, `exception/` và `security/` cấp ứng dụng. Xem [cây package và ví dụ service](ARCHITECTURE.md).
+- Dùng `com.example.hrmanagement.feature.<feature>` cho feature mới. Đặt controller, entity, repository, service interface và implementation trực tiếp trong package feature. Đặt DTO trong `feature/<feature>/dto/`. Đặt thành phần dùng chung ở `config/`, `dto/`, `exception/` và `security/` cấp ứng dụng. Xem [cây package và ví dụ service](ARCHITECTURE.md).
 - Dùng `<Feature>Controller`, `<Feature>Service`, `<Feature>ServiceImpl`, `<Feature>Repository`, `<Action><Feature>Request` và `<Feature>Response`. Tên Java dùng PascalCase cho lớp, camelCase cho biến/phương thức, UPPER_SNAKE_CASE cho hằng số và snake_case cho bảng/cột.
 - Dùng constructor injection với field `final` cho component mới. Dùng Lombok `@RequiredArgsConstructor` khi constructor chỉ nhận dependency và viết constructor tường minh khi cần logic khởi tạo riêng.
 - Với DTO dạng class, dùng Lombok `@Getter` và `@Setter` theo nhu cầu đọc hoặc gán field. Với request dùng setter để nhận JSON, dùng `@NoArgsConstructor` khi cần khai báo constructor rỗng.
@@ -43,7 +43,7 @@
 
 ## Kiểm thử và tài liệu
 
-- Dưới `src/test/java/com/example/crud/`, đặt integration test HTTP trong `controller/`, unit test nghiệp vụ trong `service/`, helper trong `helper/` và cấu hình test trong `config/`. Dùng JUnit/Mockito và MockMvc. Đặt tên test theo hành vi, thêm `@DisplayName`. Bao phủ thành công, input lỗi, dữ liệu thiếu/trùng và quyền truy cập khi áp dụng. Kiểm tra cả trạng thái lưu nếu endpoint ghi dữ liệu.
+- Dưới `src/test/java/com/example/hrmanagement/`, đặt integration test HTTP trong `controller/`, unit test nghiệp vụ trong `service/`, helper trong `helper/` và cấu hình test trong `config/`. Dùng JUnit/Mockito và MockMvc. Đặt tên test theo hành vi, thêm `@DisplayName`. Bao phủ thành công, input lỗi, dữ liệu thiếu/trùng và quyền truy cập khi áp dụng. Kiểm tra cả trạng thái lưu nếu endpoint ghi dữ liệu.
 - Integration test dùng profile `test`, MySQL Testcontainers qua `MySqlTestConfiguration` và Docker. Chỉ dùng `create-drop` trên schema test cô lập. Cấm H2 hoặc chuyển test sang datasource mặc định khi Docker thiếu. Chạy `./mvnw test` khi đủ điều kiện và báo đúng phần chạy được.
 - Khi mục tiêu của integration test là xác minh commit hoặc rollback của service, gọi service qua bean Spring hoặc qua HTTP từ bên ngoài transaction do test quản lý. Kiểm tra trạng thái DB sau khi lời gọi kết thúc và dọn dữ liệu test riêng.
 - Cập nhật [API_SPEC.md](API_SPEC.md) và [DATABASE.md](DATABASE.md) theo hợp đồng đã thay đổi. Ghi `CONTEXT.md` cho module có quyết định đáng lưu và ADR cho thay đổi kiến trúc. Ghi tiến độ bằng `$update-status` khi được yêu cầu hoặc khi workflow feature cần.

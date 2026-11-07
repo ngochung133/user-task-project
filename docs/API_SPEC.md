@@ -11,7 +11,11 @@
 | `PUT /users/{id}` | Bearer JWT | `200`, nhận cùng nhóm trường như create, cập nhật cả email và mật khẩu. |
 | `DELETE /users/{id}` | Bearer JWT | `200`, trả chuỗi xác nhận trong `data`. |
 
-Create/update User nhận trực tiếp entity. Service bỏ qua ID trong body khi tạo và dùng ID trên path để tìm bản ghi khi sửa. User response gồm `id`, `name`, `email`, `address`. JSON envelope có `statusCode`, `message`, `timestamp`, và tùy tình huống có `data`, `error`, `details`. Validation dùng `details` dạng danh sách. Lỗi do filter chain xử lý có thể khác lỗi MVC. [AuthController](../src/main/java/com/example/crud/feature/auth/AuthController.java) · [UserController](../src/main/java/com/example/crud/feature/user/UserController.java) · [UserServiceImpl](../src/main/java/com/example/crud/feature/user/UserServiceImpl.java) · [ApiResponse](../src/main/java/com/example/crud/dto/ApiResponse.java) · [SecurityConfig](../src/main/java/com/example/crud/config/SecurityConfig.java)
+Create/update User nhận trực tiếp entity. Service bỏ qua ID trong body khi tạo và dùng ID trên path để tìm bản ghi khi sửa. User response gồm `id`, `name`, `email`, `address`. JSON envelope có `statusCode`, `message`, `timestamp`, và tùy tình huống có `data`, `error`, `details`. Validation dùng `details` dạng danh sách. Lỗi do filter chain xử lý có thể khác lỗi MVC. [AuthController](../src/main/java/com/example/hrmanagement/feature/auth/AuthController.java) · [UserController](../src/main/java/com/example/hrmanagement/feature/user/UserController.java) · [UserServiceImpl](../src/main/java/com/example/hrmanagement/feature/user/UserServiceImpl.java) · [ApiResponse](../src/main/java/com/example/hrmanagement/dto/ApiResponse.java) · [SecurityConfig](../src/main/java/com/example/hrmanagement/config/SecurityConfig.java)
+
+## Company đang triển khai
+
+`POST /api/v1/companies` và `PUT /api/v1/companies/{id}` dùng `CompanyRequestDTO`. Cả bốn trường `name`, `description`, `address`, `logo` đều bắt buộc, không được là chuỗi rỗng hoặc chỉ chứa khoảng trắng, và tối đa 255 ký tự. Controller dùng `@Valid`; lỗi constraint được advice trả `400` với danh sách `details`. Đây là hợp đồng validation trong mã, chưa xác nhận qua HTTP/MySQL.
 
 ## API HR đích
 

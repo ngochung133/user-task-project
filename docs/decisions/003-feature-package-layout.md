@@ -6,7 +6,7 @@
 
 Dùng bố cục của dự án tham chiếu Hỏi Dân IT cho mã ứng dụng. Đặt controller, entity, repository, service interface và implementation cạnh nhau trong `feature/<feature>/`, với DTO trong `dto/` của feature. Đặt cấu hình, bảo mật, DTO dùng chung và exception ở cấp ứng dụng.
 
-Giữ cây test theo trách nhiệm ban đầu của repo `crud`. Integration test HTTP nằm trong `controller/`, unit test nghiệp vụ trong `service/`, helper trong `helper/` và cấu hình test trong `config/`.
+Giữ cây test theo trách nhiệm ban đầu của repo `hr-management`. Integration test HTTP nằm trong `controller/`, unit test nghiệp vụ trong `service/`, helper trong `helper/` và cấu hình test trong `config/`.
 
 ## Hệ quả
 

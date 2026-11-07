@@ -1,6 +1,6 @@
 ---
 name: write-tests
-description: Use when adding unit or HTTP integration tests for an existing CRUD HR module or security behavior.
+description: Use when adding unit or HTTP integration tests for an existing hr-management module or security behavior.
 ---
 
 # Viết test cho HR API

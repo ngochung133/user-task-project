@@ -1,6 +1,6 @@
 ---
 name: review-pr
-description: Use when reviewing a pull request or a specified change range in the CRUD HR project.
+description: Use when reviewing a pull request or a specified change range in the hr-management project.
 ---
 
 # Review thay đổi HR API

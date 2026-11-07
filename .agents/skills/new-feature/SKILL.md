@@ -1,6 +1,6 @@
 ---
 name: new-feature
-description: Use when implementing a requested HR feature module in the CRUD project.
+description: Use when implementing a requested HR feature module in the hr-management project.
 ---
 
 # Xây module HR

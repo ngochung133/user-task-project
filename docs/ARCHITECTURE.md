@@ -2,13 +2,13 @@
 
 ## Hiện trạng
 
-`CrudApplication` nằm ở `com.example.crud` và scan các package bên dưới. AuthController gọi AuthenticationManager và JwtService. UserController gọi UserService qua interface, còn UserServiceImpl dùng UserRepository để truy cập MySQL. [Entry point](../src/main/java/com/example/crud/CrudApplication.java) · [Mã ứng dụng](../src/main/java/com/example/crud/)
+`HrManagementApplication` nằm ở `com.example.hrmanagement` và scan các package bên dưới. AuthController gọi AuthenticationManager và JwtService. UserController gọi UserService qua interface, còn UserServiceImpl dùng UserRepository để truy cập MySQL. [Entry point](../src/main/java/com/example/hrmanagement/HrManagementApplication.java) · [Mã ứng dụng](../src/main/java/com/example/hrmanagement/)
 
 ## Cấu trúc feature-based hiện tại
 
 ```text
-src/main/java/com/example/crud/
-├── CrudApplication.java
+src/main/java/com/example/hrmanagement/
+├── HrManagementApplication.java
 ├── config/                  # SecurityConfig
 ├── dto/                     # ApiResponse
 ├── exception/               # Exception và advice dùng chung
@@ -22,7 +22,7 @@ src/main/java/com/example/crud/
         └── dto/
 ```
 
-Test dưới `src/test/java/com/example/crud/` theo cây cũ. `controller/` chứa integration test Auth và User, `service/` chứa unit test, `helper/` chứa fixture và `config/` chứa cấu hình MySQL Testcontainers. [ADR-003](decisions/003-feature-package-layout.md)
+Test dưới `src/test/java/com/example/hrmanagement/` theo cây cũ. `controller/` chứa integration test Auth và User, `service/` chứa unit test, `helper/` chứa fixture và `config/` chứa cấu hình MySQL Testcontainers. [ADR-003](decisions/003-feature-package-layout.md)
 
 ## Mở rộng theo roadmap
 
@@ -30,10 +30,10 @@ Permission, Company, Role và File sẽ nằm trong các package riêng dưới 
 
 ## Tách service thành interface và implementation
 
-1. Đưa các chữ ký nghiệp vụ mà caller cần vào interface trong package feature. [UserService](../src/main/java/com/example/crud/feature/user/UserService.java)
-2. Đưa nghiệp vụ và dependency vào class `implements` cùng package. Đặt `@Service` trên class và `@Override` trên các phương thức thực thi hợp đồng. Dùng mapper cho phần chuyển entity sang response khi được tái sử dụng. [UserServiceImpl](../src/main/java/com/example/crud/feature/user/UserServiceImpl.java) · [UserMapper](../src/main/java/com/example/crud/feature/user/UserMapper.java)
-3. Khai báo kiểu interface trong field và constructor của controller. Spring tiêm implementation khi có đúng một bean phù hợp. [UserController](../src/main/java/com/example/crud/feature/user/UserController.java)
-4. Trong unit test, `@InjectMocks` khởi tạo class implementation và truyền các dependency đã mock. Integration test kiểm tra việc wiring thông qua HTTP. [UserServiceTest](../src/test/java/com/example/crud/service/UserServiceTest.java)
+1. Đưa các chữ ký nghiệp vụ mà caller cần vào interface trong package feature. [UserService](../src/main/java/com/example/hrmanagement/feature/user/UserService.java)
+2. Đưa nghiệp vụ và dependency vào class `implements` cùng package. Đặt `@Service` trên class và `@Override` trên các phương thức thực thi hợp đồng. Dùng mapper cho phần chuyển entity sang response khi được tái sử dụng. [UserServiceImpl](../src/main/java/com/example/hrmanagement/feature/user/UserServiceImpl.java) · [UserMapper](../src/main/java/com/example/hrmanagement/feature/user/UserMapper.java)
+3. Khai báo kiểu interface trong field và constructor của controller. Spring tiêm implementation khi có đúng một bean phù hợp. [UserController](../src/main/java/com/example/hrmanagement/feature/user/UserController.java)
+4. Trong unit test, `@InjectMocks` khởi tạo class implementation và truyền các dependency đã mock. Integration test kiểm tra việc wiring thông qua HTTP. [UserServiceTest](../src/test/java/com/example/hrmanagement/service/UserServiceTest.java)
 
 ## Xác thực và phân quyền
 

@@ -1,6 +1,6 @@
 ---
 name: start
-description: Use when starting or resuming work on the CRUD HR project, onboarding, or selecting the next task.
+description: Use when starting or resuming work on the hr-management project, onboarding, or selecting the next task.
 ---
 
 # Mở phiên HR
