@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.hrmanagement.dto.ApiResponse;
 import com.example.hrmanagement.feature.user.dto.UserResponseDTO;
 
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
+
 import jakarta.validation.Valid;
 
 @RestController
@@ -31,6 +33,7 @@ public class UserController {
         return ApiResponse.success(dto);
     }
 
+    @SecurityRequirements
     @PostMapping("/users")
         public ResponseEntity<?> postUser(@Valid @RequestBody User user){
             UserResponseDTO dto = this.userService.createUser(user);

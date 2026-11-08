@@ -1,0 +1,1009 @@
+{
+  "info": {
+    "name": "HR Management - API Tests",
+    "description": "API tests from current repository. Run entire collection in order, 1 iteration, against LOCAL development only. Creates a unique test user/company/permission and deletes only captured IDs. Regression requests intentionally assert required behavior and may fail on known API bugs. No existing user credentials required.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "01 - Auth and test user",
+      "item": [
+        {
+          "name": "01 - Protected request without JWT",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/users",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const runId=Date.now()+\"-\"+Math.random().toString(36).slice(2,8);",
+                  "pm.collectionVariables.set(\"runId\",runId);",
+                  "pm.collectionVariables.set(\"testEmail\",\"postman-\"+runId+\"@example.test\");",
+                  "pm.collectionVariables.set(\"testPassword\",\"Pm!\"+runId+\"Password\");",
+                  "[\"accessToken\",\"userId\",\"companyId\",\"permissionId\"].forEach(k=>pm.collectionVariables.unset(k));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02 - Create isolated test user",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/users",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman {{runId}}\",\n  \"email\": \"{{testEmail}}\",\n  \"password\": \"{{testPassword}}\",\n  \"address\": \"Postman test address\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"Response envelope\", () => { const j=pm.response.json(); pm.expect(j.statusCode).to.eql(pm.response.code); pm.expect(j).to.have.property(\"data\"); });",
+                  "if(pm.response.code===201) { const id=pm.response.json().data.id; pm.test(\"Created ID\",()=>pm.expect(id).to.be.a(\"number\")); pm.collectionVariables.set(\"userId\",id); }pm.test(\"No password in response\",()=>pm.expect(pm.response.json().data).not.to.have.property(\"password\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03 - Reject wrong password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/login",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{testEmail}}\",\n  \"password\": \"Incorrect-password\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04 - Login and save JWT",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/login",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{testEmail}}\",\n  \"password\": \"{{testPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"Response envelope\", () => { const j=pm.response.json(); pm.expect(j.statusCode).to.eql(pm.response.code); pm.expect(j).to.have.property(\"data\"); });",
+                  "if(pm.response.code===201) { const d=pm.response.json().data; pm.test(\"Bearer JWT issued\",()=>{pm.expect(d.tokenType).to.eql(\"Bearer\");pm.expect(d.accessToken).to.be.a(\"string\").and.not.empty;}); pm.collectionVariables.set(\"accessToken\",d.accessToken); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "05 - Authenticated homepage",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/auth/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Homepage\",()=>pm.expect(pm.response.text()).to.eql(\"Hello Web\"));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 - User",
+      "item": [
+        {
+          "name": "06 - List contains test user",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/users"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Response envelope\", () => { const j=pm.response.json(); pm.expect(j.statusCode).to.eql(pm.response.code); pm.expect(j).to.have.property(\"data\"); });",
+                  "pm.test(\"Test user exists\",()=>{const id=Number(pm.collectionVariables.get(\"userId\")); const d=pm.response.json().data;pm.expect(d.some(x=>x.id===id)).to.eql(true);pm.expect(d.every(x=>!(\"password\" in x))).to.eql(true);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "07 - Reject duplicate email",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/users",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman {{runId}}\",\n  \"email\": \"{{testEmail}}\",\n  \"password\": \"{{testPassword}}\",\n  \"address\": \"Postman test address\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 409\", () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "08 - Reject invalid user",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/users",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"\",\n  \"email\": \"invalid\",\n  \"password\": \"123\",\n  \"address\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "09 - Update test user",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/users/{{userId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Postman {{runId}}\",\n  \"email\": \"{{testEmail}}\",\n  \"password\": \"{{testPassword}}\",\n  \"address\": \"Postman test address\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Response envelope\", () => { const j=pm.response.json(); pm.expect(j.statusCode).to.eql(pm.response.code); pm.expect(j).to.have.property(\"data\"); });",
+                  "pm.test(\"No password in response\",()=>pm.expect(pm.response.json().data).not.to.have.property(\"password\"));pm.test(\"Updated name\",()=>pm.expect(pm.response.json().data.name).to.eql(pm.variables.replaceIn(\"Updated Postman {{runId}}\")));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03 - Company",
+      "item": [
+        {
+          "name": "10 - Company requires JWT",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/companies",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "11 - Create company",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/companies",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"PM Company {{runId}}\",\n  \"description\": \"Postman fixture {{runId}}\",\n  \"address\": \"Postman test address\",\n  \"logo\": \"postman-test.png\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"Response envelope\", () => { const j=pm.response.json(); pm.expect(j.statusCode).to.eql(pm.response.code); pm.expect(j).to.have.property(\"data\"); });",
+                  "if(pm.response.code===201) { const id=pm.response.json().data.id; pm.test(\"Created ID\",()=>pm.expect(id).to.be.a(\"number\")); pm.collectionVariables.set(\"companyId\",id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "12 - Reject duplicate company",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/companies",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"PM Company {{runId}}\",\n  \"description\": \"Postman fixture {{runId}}\",\n  \"address\": \"Postman test address\",\n  \"logo\": \"postman-test.png\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 409\", () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "13 - Reject missing company fields",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/companies",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Four field errors\",()=>pm.expect(pm.response.json().details.length).to.be.at.least(4));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "14 - Reject blank company fields",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/companies",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"   \",\n  \"description\": \"   \",\n  \"address\": \"   \",\n  \"logo\": \"   \"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15 - Reject oversized company name",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/companies",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\",\n  \"description\": \"Postman fixture {{runId}}\",\n  \"address\": \"Postman test address\",\n  \"logo\": \"postman-test.png\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "16 - Filter company name with pagination",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/companies?name={{runId}}&page=1&size=10&sort=id,asc"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Response envelope\", () => { const j=pm.response.json(); pm.expect(j.statusCode).to.eql(pm.response.code); pm.expect(j).to.have.property(\"data\"); });",
+                  "pm.test(\"Pagination and fixture\",()=>{const d=pm.response.json().data;pm.expect(d.page).to.eql(1);pm.expect(d.size).to.eql(10);pm.expect(d.content.some(x=>x.id===Number(pm.collectionVariables.get(\"companyId\")))).to.eql(true);pm.expect(d.content.every(x=>x.name.includes(pm.collectionVariables.get(\"runId\")))).to.eql(true);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "17 - Update company keeping same name [regression]",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/companies/{{companyId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"PM Company {{runId}}\",\n  \"description\": \"Postman fixture {{runId}}\",\n  \"address\": \"Updated test address\",\n  \"logo\": \"postman-test.png\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Response envelope\", () => { const j=pm.response.json(); pm.expect(j.statusCode).to.eql(pm.response.code); pm.expect(j).to.have.property(\"data\"); });",
+                  "pm.test(\"Address updated\",()=>pm.expect(pm.response.json().data.address).to.eql(\"Updated test address\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "18 - Update company with new name",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/companies/{{companyId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated PM Company {{runId}}\",\n  \"description\": \"Postman fixture {{runId}}\",\n  \"address\": \"Postman test address\",\n  \"logo\": \"postman-test.png\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Response envelope\", () => { const j=pm.response.json(); pm.expect(j.statusCode).to.eql(pm.response.code); pm.expect(j).to.have.property(\"data\"); });",
+                  "pm.test(\"Name updated\",()=>pm.expect(pm.response.json().data.name).to.eql(pm.variables.replaceIn(\"Updated PM Company {{runId}}\")));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "19 - Verify company update persisted",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/companies?name={{runId}}&page=1&size=10&sort=id,asc"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Response envelope\", () => { const j=pm.response.json(); pm.expect(j.statusCode).to.eql(pm.response.code); pm.expect(j).to.have.property(\"data\"); });",
+                  "pm.test(\"Persisted updated name\",()=>{const x=pm.response.json().data.content.find(x=>x.id===Number(pm.collectionVariables.get(\"companyId\")));pm.expect(x).to.exist;pm.expect(x.name).to.eql(pm.variables.replaceIn(\"Updated PM Company {{runId}}\"));});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "20 - Delete test company",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/companies/{{companyId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Response envelope\", () => { const j=pm.response.json(); pm.expect(j.statusCode).to.eql(pm.response.code); pm.expect(j).to.have.property(\"data\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "21 - Verify company removed",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/companies?name={{runId}}&page=1&size=10"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Response envelope\", () => { const j=pm.response.json(); pm.expect(j.statusCode).to.eql(pm.response.code); pm.expect(j).to.have.property(\"data\"); });",
+                  "pm.test(\"Company absent\",()=>pm.expect(pm.response.json().data.content.some(x=>x.id===Number(pm.collectionVariables.get(\"companyId\")))).to.eql(false));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "22 - Delete missing company [regression]",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/companies/{{companyId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04 - Permission",
+      "item": [
+        {
+          "name": "23 - Permission requires JWT",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/permissions",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "24 - Create permission",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/permissions",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"PM Permission {{runId}}\",\n  \"apiPath\": \"/api/v1/postman-fixture-{{runId}}\",\n  \"method\": \"GET\",\n  \"module\": \"COMPANY\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"Response envelope\", () => { const j=pm.response.json(); pm.expect(j.statusCode).to.eql(pm.response.code); pm.expect(j).to.have.property(\"data\"); });",
+                  "if(pm.response.code===201) { const id=pm.response.json().data.id; pm.test(\"Created ID\",()=>pm.expect(id).to.be.a(\"number\")); pm.collectionVariables.set(\"permissionId\",id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "25 - Read permission by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/permissions/{{permissionId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Response envelope\", () => { const j=pm.response.json(); pm.expect(j.statusCode).to.eql(pm.response.code); pm.expect(j).to.have.property(\"data\"); });",
+                  "pm.test(\"Correct ID\",()=>pm.expect(pm.response.json().data.id).to.eql(Number(pm.collectionVariables.get(\"permissionId\"))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "26 - Filter permissions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/permissions?name={{runId}}&method=GET&module=COMPANY&page=1&size=10&sort=id,asc"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Response envelope\", () => { const j=pm.response.json(); pm.expect(j.statusCode).to.eql(pm.response.code); pm.expect(j).to.have.property(\"data\"); });",
+                  "pm.test(\"Filtered fixture\",()=>{const d=pm.response.json().data;pm.expect(d.page).to.eql(1);pm.expect(d.content.some(x=>x.id===Number(pm.collectionVariables.get(\"permissionId\")))).to.eql(true);pm.expect(d.content.every(x=>x.method===\"GET\" && x.module===\"COMPANY\" && x.name.includes(pm.collectionVariables.get(\"runId\")))).to.eql(true);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "27 - Reject duplicate permission",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/permissions",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"PM Permission {{runId}}\",\n  \"apiPath\": \"/api/v1/postman-fixture-{{runId}}\",\n  \"method\": \"GET\",\n  \"module\": \"COMPANY\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 409\", () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "28 - Reject missing permission fields",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/permissions",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "29 - Update permission using path ID [regression]",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/permissions/{{permissionId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated PM Permission {{runId}}\",\n  \"apiPath\": \"/api/v1/postman-updated-{{runId}}\",\n  \"method\": \"GET\",\n  \"module\": \"COMPANY\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Response envelope\", () => { const j=pm.response.json(); pm.expect(j.statusCode).to.eql(pm.response.code); pm.expect(j).to.have.property(\"data\"); });",
+                  "pm.test(\"Updated ID and name\",()=>{const d=pm.response.json().data;pm.expect(d.id).to.eql(Number(pm.collectionVariables.get(\"permissionId\")));pm.expect(d.name).to.eql(pm.variables.replaceIn(\"Updated PM Permission {{runId}}\"));});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "30 - Verify permission update persisted [regression]",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/permissions/{{permissionId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Response envelope\", () => { const j=pm.response.json(); pm.expect(j.statusCode).to.eql(pm.response.code); pm.expect(j).to.have.property(\"data\"); });",
+                  "pm.test(\"Updated permission persisted\",()=>pm.expect(pm.response.json().data.name).to.eql(pm.variables.replaceIn(\"Updated PM Permission {{runId}}\")));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "31 - Delete test permission",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/permissions/{{permissionId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Response envelope\", () => { const j=pm.response.json(); pm.expect(j.statusCode).to.eql(pm.response.code); pm.expect(j).to.have.property(\"data\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "32 - Deleted permission returns 404",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/permissions/{{permissionId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "05 - Cleanup test user",
+      "item": [
+        {
+          "name": "33 - Delete test user",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/users/{{userId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Response envelope\", () => { const j=pm.response.json(); pm.expect(j.statusCode).to.eql(pm.response.code); pm.expect(j).to.have.property(\"data\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "34 - Verify test user removed",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/users"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Response envelope\", () => { const j=pm.response.json(); pm.expect(j.statusCode).to.eql(pm.response.code); pm.expect(j).to.have.property(\"data\"); });",
+                  "pm.test(\"Test user absent\",()=>pm.expect(pm.response.json().data.some(x=>x.id===Number(pm.collectionVariables.get(\"userId\")))).to.eql(false));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

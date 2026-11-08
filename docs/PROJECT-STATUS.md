@@ -1,6 +1,6 @@
 # Tiến độ HR Management API
 
-Cập nhật 2026-11-07. Baseline lấy từ mã và test trong repo `hr-management`.
+Cập nhật 2026-11-08. Baseline lấy từ mã và test trong repo `hr-management`.
 
 ## Hiện trạng
 
@@ -9,12 +9,23 @@ Cập nhật 2026-11-07. Baseline lấy từ mã và test trong repo `hr-managem
 | Nền tảng | Java 25, Spring Boot 4.1.1, Maven Wrapper, Spring MVC, JPA/MySQL, Jakarta Validation, Security Resource Server, response wrapper và global advice. |
 | User | Có list/create/update/delete, BCrypt và response DTO. Còn nhận entity làm request, thiếu get theo ID, phân trang và quan hệ HR. |
 | Auth | Có login bằng email/mật khẩu và Bearer JWT HS256, role cố định `USER`. Chưa có profile `/me`, refresh, logout hay phân quyền theo dữ liệu. |
-| Permission | Đang triển khai trong `feature/permission`: có entity, constraint `(api_path, method)`, request/response DTO, service interface/implementation và năm route CRUD. List dùng `Pageable` và Specification lọc theo name/method/module. Còn lỗi và thiếu kiểm thử; chưa xác nhận API hoạt động qua HTTP/MySQL. |
-| Kiểm thử | Cây nguồn có 10 unit test User, 15 integration test User và 3 integration test Auth; integration test dùng MySQL Testcontainers 8.4. Chưa có test Permission trong cây nguồn. Các báo cáo Surefire hiện có không đại diện cho một lần chạy toàn bộ suite trên code hiện tại; xem ghi nhận phiên bên dưới. |
-| Company, Role, RBAC, Upload | Chưa triển khai trong repo này. |
-| Kiến trúc | Auth, User và Permission nằm trong `feature/`. Các thành phần dùng chung nằm ở cấp ứng dụng. User có service interface, implementation và mapper. Permission ánh xạ response bằng `fromEntity()`. Test tổ chức theo trách nhiệm. Xem [ARCHITECTURE.md](ARCHITECTURE.md). |
+| Permission | Có CRUD, unique `(api_path, method)`, phân trang qua `PageResponseDTO` và Specification lọc name/method/module; mẫu LIKE đã sửa. Postman đã xác nhận một số luồng HTTP chạy được, nhưng PUT còn truyền ID null và trả 500; chưa hoàn thiện validation/chuẩn hóa và kiểm thử tự động trong cây test. |
+| Kiểm thử | Cây nguồn có 10 unit test User, 15 integration test User và 3 integration test Auth; integration test dùng MySQL Testcontainers 8.4. Chưa có test Company/Permission trong cây test. Lượt Postman 2026-11-08 chạy 34 request, 73 assertion: 66 đạt, 7 thất bại; không thay thế suite JUnit/MySQL Testcontainers. Chưa xác nhận lại toàn bộ suite trên code hiện tại. |
+| Company | Đang triển khai: POST/GET list và PUT/DELETE theo ID ở `/api/v1/companies`; entity, repository, service, request/response record, lọc và phân trang. Request có `@NotBlank`, `@Size(max = 255)` cho bốn field. Postman xác nhận các luồng tạo/list/sửa đổi tên/xóa và validation; update giữ nguyên tên còn trả 409. Chưa có GET theo ID hoặc quan hệ User–Company. |
+| Role, RBAC, Upload | Chưa triển khai trong repo này. |
+| Kiến trúc | Auth, User, Permission và Company nằm trong `feature/`. Các thành phần dùng chung nằm ở cấp ứng dụng. User có service interface, implementation và mapper. Permission ánh xạ response bằng `fromEntity()`. Test tổ chức theo trách nhiệm. Xem [ARCHITECTURE.md](ARCHITECTURE.md). |
 
 Đối chiếu [POM](../pom.xml), [mã hiện tại](../src/main/java/com/example/hrmanagement/), [test](../src/test/java/com/example/hrmanagement/) và [API hiện hành](API_SPEC.md).
+
+## Ghi nhận phiên 2026-11-08
+
+- **Đã có:** commit `99d15dd` (`company crud`) chứa mã Company và các thay đổi nền tảng đang xem. Controller Company có `@RestController`, interface/service dùng thống nhất DTO và `Pageable` của package mới, repository khai báo `existsByName`. Đã dọn 6 file Company trùng trong package `crud`; kiểm tra ở phiên sửa không còn Java tham chiếu package cũ. Lời gọi filter đã đồng bộ thành `description()`. [Controller](../src/main/java/com/example/hrmanagement/feature/company/CompanyController.java) · [Service](../src/main/java/com/example/hrmanagement/feature/company/CompanyServiceImpl.java) · [Repository](../src/main/java/com/example/hrmanagement/feature/company/CompanyRepository.java)
+- **Validation Company:** cả `name`, `description`, `address`, `logo` bắt buộc, không được rỗng/chỉ có khoảng trắng và tối đa 255 ký tự. Controller áp dụng `@Valid` cho POST/PUT. Harness tạm dùng Hibernate Validator thật ghi nhận 16 trường hợp dữ liệu sai bị từ chối và giá trị dài 255 ký tự được chấp nhận; đây không phải test JUnit được lưu trong repo. Postman sau đó xác nhận request tạo thiếu field, field trắng và tên quá dài trả 400. [Request DTO](../src/main/java/com/example/hrmanagement/feature/company/dto/CompanyRequestDTO.java)
+- **Kiểm chứng biên dịch và môi trường:** sau khi dọn mã cũ và sửa accessor filter, Maven đã biên dịch thực sự 38 file Java thành công bằng `./mvnw -o -Daether.syncContext.named.factory=noop -DskipTests compile`. Không suy ra toàn bộ suite pass từ kết quả này. Lượt khởi động sau đó từng lỗi MySQL `Access denied`; lượt Postman lúc 00:15 đã gọi được API tại `http://localhost:8080`. Cấu hình hiện dùng placeholder môi trường cho mật khẩu DB và JWT secret; chưa kiểm chứng mọi môi trường chạy hoặc kết luận task bảo mật hoàn tất.
+- **Kết quả Postman đã chạy:** collection riêng `HR Management - API Tests` được tạo và import, chạy 34 request trong một iteration: **66/73 assertion đạt, 7 thất bại, 0 execution errors**. Ba request có assertion thất bại là update Company giữ nguyên tên (409 thay vì 200), update Permission theo ID (500 thay vì 200) và đọc lại Permission vẫn thấy tên cũ. Các assertion envelope/data thất bại là hệ quả của hai luồng update lỗi. Company/Permission/User test đã được xóa và các request kiểm tra sau xóa đạt. File collection và báo cáo đang ở thư mục `postman/` chưa được Git theo dõi tại thời điểm cập nhật. [Báo cáo lượt chạy](../postman/RUN-RESULTS.md) · [Collection](../postman/hr-management.postman_collection.json)
+- **Lỗi đang dở:** Company update kiểm tra tên trùng chưa loại ID hiện tại; chưa xử lý riêng unique constraint để trả 409 khi ghi đồng thời và phương thức ghi service chưa có `@Transactional`. Company DELETE đã kiểm tra tồn tại và trả 404 khi thiếu trong lượt Postman. Permission PUT vẫn truyền `null` thay ID trên URL; kiểm tra trùng update chưa loại bản ghi hiện tại. Hai controller list hiện đã dùng `PageResponseDTO.from(...)`, mẫu LIKE Permission đã là `%` + giá trị + `%`. Chưa hoàn thiện sort ổn định, allowlist/chuẩn hóa Permission, RBAC và test Company/Permission trong cây test.
+- **Phạm vi tiếp theo do người dùng giới hạn:** chỉ thao tác API Company trong collection có sẵn **`hr-management`**; không dùng collection mới hoặc API khác khi tiếp tục thao tác Postman. Kết quả collection riêng ở trên là lịch sử trước khi có giới hạn này, không phải xác nhận đã chạy Company trong collection `hr-management`. Chưa có lượt chạy tiếp theo sau giới hạn. Task tiếp theo là đối chiếu request Company trong collection có sẵn và kiểm tra lại luồng update; chỉ sửa source khi có yêu cầu thực hiện tương ứng.
+- **Điểm cần chốt / chưa bắt đầu:** quyền quản trị Company/Permission và hợp đồng list cuối cùng; xử lý Company có User khi triển khai quan hệ. Role, RBAC, Upload, Auth refresh/logout và User HR vẫn thuộc roadmap tương lai. Lượt cập nhật status này chỉ đối chiếu mã, Git và kết quả đã có; không chạy lại Maven, Postman hoặc test.
 
 ## Ghi nhận phiên 2026-11-07
 
@@ -38,13 +49,13 @@ Cập nhật 2026-11-07. Baseline lấy từ mã và test trong repo `hr-managem
 
 1. **Baseline và tách feature · Hoàn thành.** Đặt Auth và User trong `feature/` theo bố cục tham chiếu, giữ cây test ban đầu và chạy suite bằng MySQL Testcontainers.
 2. **Nền tảng bảo mật và dữ liệu.** Tách secret khỏi cấu hình mặc định. Chốt chính sách tạo/sửa User, tính duy nhất của email và kế hoạch dữ liệu trước khi mở rộng hợp đồng HR.
-3. **Permission và Company · Đang làm một phần.** Permission đã có mã CRUD, phân trang và bộ lọc nhưng chưa hoàn thiện validation, hợp đồng và kiểm thử; Company chưa bắt đầu. Hoàn thiện từng module với DB constraint và test JWT.
+3. **Permission và Company · Đang làm một phần.** Permission và Company đã có mã CRUD, phân trang và bộ lọc; đã chạy một lượt Postman nhưng còn lỗi update và thiếu kiểm thử tự động Company/Permission, chưa hoàn tất hợp đồng và xử lý xung đột. Hoàn thiện từng module với DB constraint và test JWT.
 4. **Role và User HR.** Thêm quan hệ Role–Permission, User–Role, User–Company và API User có version theo hợp đồng được chốt.
 5. **Auth hoàn chỉnh.** Thêm profile, đăng ký theo chính sách được duyệt, refresh/logout theo ADR được duyệt, rồi tích hợp kiểm tra quyền theo route và HTTP method.
 6. **Upload và hoàn thiện.** Bổ sung avatar/logo theo ADR được duyệt, sau đó rà API, migration và test hồi quy.
 
 ## Điểm cần chốt khi đến phạm vi tương ứng
 
-- Cấu hình mặc định chứa khóa JWT và mật khẩu DB dạng literal. Luồng hiện tại cấp JWT 24 giờ. Chốt cách chuyển secret/TTL và ảnh hưởng đến token đang dùng trong task bảo mật riêng.
+- Cấu hình đang dùng placeholder môi trường cho JWT secret và mật khẩu DB. Chưa xác minh các môi trường chạy đều cấp biến đúng. Luồng hiện tại cấp JWT 24 giờ. Chốt cách chuyển secret/TTL và ảnh hưởng đến token đang dùng trong task bảo mật riêng.
 - `POST /users` hiện public. Tách đăng ký khỏi tạo User do admin, và chốt danh sách trường được sửa, khi triển khai hợp đồng HR.
 - Thời hạn refresh, cookie/CSRF, vòng đời token và cấu hình upload nằm trong ADR đề xuất. Tài liệu của dự án tham chiếu chỉ cung cấp mẫu.

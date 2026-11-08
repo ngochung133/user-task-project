@@ -7,6 +7,8 @@ import com.example.hrmanagement.dto.ApiResponse;
 import com.example.hrmanagement.feature.auth.dto.LoginRequestDTO;
 import com.example.hrmanagement.feature.auth.dto.LoginResponseDTO;
 
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
@@ -39,6 +41,7 @@ public class AuthController {
     }
     
 
+    @SecurityRequirements
     @PostMapping("/login")
     public ResponseEntity<?> postLogin (@Valid @RequestBody LoginRequestDTO login) {
 
