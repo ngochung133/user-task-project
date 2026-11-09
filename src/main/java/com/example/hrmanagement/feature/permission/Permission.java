@@ -35,7 +35,7 @@ public class Permission{
     @GeneratedValue (strategy = GenerationType.IDENTITY)
     private long id;
 
-    @NotBlank (message ="name can not be blank")
+    @Column(nullable = false, length = 255)     
     private String name;
 
     @Collate("utf8mb4_0900_bin")
