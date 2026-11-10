@@ -12,7 +12,7 @@ public class PermissionSpecification {
         if(value == null || value.isBlank()){
             return Specification.unrestricted();
         }
-        String nomalized = value.trim();
+        String nomalized = value.trim().toUpperCase(Locale.ROOT);
 
         return (root,query,cb) -> cb.equal(root.get(field),nomalized);
     }

@@ -1,5 +1,7 @@
 package com.example.hrmanagement.feature.permission;
 
+import java.util.Locale;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -22,34 +24,42 @@ public class PermissionServiceImpl implements PermissionService {
     @Override 
     @Transactional 
     public PermissionResponseDTO create(PermissionRequestDTO request){
-        if(permissionRepository.existsByApiPathAndMethod(request.getApiPath(), request.getMethod())){
+        String name = request.getName().trim();
+        String apiPath = request.getApiPath().trim();
+        String method = request.getMethod().trim().toUpperCase(Locale.ROOT);
+        String module = request.getModule().trim().toUpperCase(Locale.ROOT);
+        if(permissionRepository.existsByApiPathAndMethod(apiPath, method)){
             throw new ResourceAlreadyExistException(
-                "Permission", "apiPath + method", request.getApiPath() + " " + request.getMethod());
+                "Permission", "apiPath + method", apiPath + " " + method);
         }
         Permission p = new Permission();
-        p.setName(request.getName());
-        p.setMethod(request.getMethod());
-        p.setApiPath(request.getApiPath());
-        p.setModule(request.getModule());
+        p.setName(name);
+        p.setMethod(method);
+        p.setApiPath(apiPath);
+        p.setModule(module);
         this.permissionRepository.save(p);
         return PermissionResponseDTO.fromEntity(p);
     }
 
-    @Override
+    @Override   
     @Transactional 
     public PermissionResponseDTO update(Long id, PermissionRequestDTO request) {
         //formatter:off
     Permission permissionInDB = this.permissionRepository.findById(id)
     .orElseThrow(() -> new ResourceNotFoundException("Permission", "id", id));
-    if(this.permissionRepository.existsByApiPathAndMethodAndIdNot(request.getApiPath(), request.getMethod(),id)){
+    String name = request.getName().trim();
+    String apiPath = request.getApiPath().trim();
+    String method = request.getMethod().trim().toUpperCase(Locale.ROOT);
+    String module = request.getModule().trim().toUpperCase(Locale.ROOT);
+    if(this.permissionRepository.existsByApiPathAndMethodAndIdNot(apiPath, method,id)){
         throw new ResourceAlreadyExistException("Permission",
         "Api + Method",
-        request.getApiPath() + " " + request.getMethod());
+        apiPath + " " + method);
     }
-    permissionInDB.setApiPath(request.getApiPath());
-    permissionInDB.setMethod(request.getMethod());
-    permissionInDB.setModule(request.getModule());
-    permissionInDB.setName(request.getName());
+    permissionInDB.setApiPath(apiPath);
+    permissionInDB.setMethod(method);
+    permissionInDB.setModule(module);
+    permissionInDB.setName(name);
     this.permissionRepository.saveAndFlush(permissionInDB);
     return PermissionResponseDTO.fromEntity(permissionInDB);
     }

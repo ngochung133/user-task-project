@@ -1,5 +1,4 @@
 package com.example.hrmanagement.feature.user.dto;
 
-public class UserFilterDTO {
-
-}
+public record UserFilterDTO(Integer age, String name, String email) {
+}  

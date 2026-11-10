@@ -33,6 +33,7 @@ public class RoleSpecification {
     if (permissionIds == null || permissionIds.isEmpty()) {
         return Specification.unrestricted();
     }
+    //tim role theo list permission
     return (root, query, cb) -> {
         Predicate[] predicates = permissionIds.stream()
                 .map(id -> cb.equal(root.join("permissions").get("id"), id))
