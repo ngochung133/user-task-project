@@ -39,7 +39,7 @@ public class RoleServiceImpl implements RoleService {
         permissions.forEach(permisison -> missingIds.remove(permisison.getId()));
 
         if(!missingIds.isEmpty()){
-            throw new ResourceNotFoundException("Permisison", "id", missingIds);
+            throw new ResourceNotFoundException("Permission", "id", missingIds);
         }
         Role role = new Role();
         role.setName(request.name());
@@ -71,6 +71,14 @@ public class RoleServiceImpl implements RoleService {
         roleInDB.setPermissions(new HashSet<>(permissions));
         this.roleRepository.saveAndFlush(roleInDB);
         return RoleResponseDTO.fromEntity(roleInDB);
+    }
+
+    @Override 
+    @Transactional (readOnly = true)
+    public RoleResponseDTO getById(Long id){
+        Role role = this.roleRepository.findById(id)
+        .orElseThrow(() -> new ResourceNotFoundException("Role", "id", id));
+        return RoleResponseDTO.fromEntity(role);
     }
 
     @Override 

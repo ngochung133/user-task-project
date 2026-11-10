@@ -3,7 +3,6 @@ package com.example.hrmanagement.feature.role.dto;
 import java.time.Instant;
 import java.util.List;
 
-import org.hibernate.mapping.Set;
 
 import com.example.hrmanagement.feature.permission.dto.PermissionResponseDTO;
 import com.example.hrmanagement.feature.role.Role;
@@ -16,7 +15,7 @@ public record RoleResponseDTO(
 
     String description,
 
-    List<PermissionResponseDTO> permisisons,
+    List<PermissionResponseDTO> permissions,
 
     Instant createdAt,
 

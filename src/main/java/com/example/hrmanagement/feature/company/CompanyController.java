@@ -21,6 +21,8 @@ import com.example.hrmanagement.feature.company.dto.CompanyResponseDTO;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.RequestParam;
+
 
 @RestController
 @RequestMapping("/api/v1/companies")
@@ -46,6 +48,13 @@ public class CompanyController {
         this.companyService.delete(id);
         return ApiResponse.success("Delete successfully");
     }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getCompanyById(@PathVariable Long id) {
+        CompanyResponseDTO dto = this.companyService.getById(id);
+        return ApiResponse.success(dto);
+    }
+    
 
     @GetMapping
     public ResponseEntity<?> getAllCompany(Pageable pageable, @ModelAttribute CompanyFilterDTO filter){

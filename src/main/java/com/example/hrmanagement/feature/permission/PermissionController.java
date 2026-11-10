@@ -53,8 +53,8 @@ public class PermissionController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> updatePermission(@PathVariable long id, @RequestBody PermissionRequestDTO request) {
-        PermissionResponseDTO dto = this.permissionService.update(null, request);
+    public ResponseEntity<?> updatePermission(@PathVariable long id, @Valid @RequestBody PermissionRequestDTO request) {
+        PermissionResponseDTO dto = this.permissionService.update(id, request);
         return ApiResponse.success(dto);
     }
     

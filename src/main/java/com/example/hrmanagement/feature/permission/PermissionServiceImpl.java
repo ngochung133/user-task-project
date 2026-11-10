@@ -3,13 +3,14 @@ package com.example.hrmanagement.feature.permission;
 import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Pageable;
 import com.example.hrmanagement.exception.ResourceAlreadyExistException;
 import com.example.hrmanagement.exception.ResourceNotFoundException;
 import com.example.hrmanagement.feature.permission.dto.PermissionFilterDTO;
 import com.example.hrmanagement.feature.permission.dto.PermissionRequestDTO;
 import com.example.hrmanagement.feature.permission.dto.PermissionResponseDTO;
-import jakarta.transaction.Transactional;
+
 import lombok.RequiredArgsConstructor;
 
 @Service 
@@ -39,8 +40,8 @@ public class PermissionServiceImpl implements PermissionService {
     public PermissionResponseDTO update(Long id, PermissionRequestDTO request) {
         //formatter:off
     Permission permissionInDB = this.permissionRepository.findById(id)
-    .orElseThrow(() -> new ResourceNotFoundException("Permisison", "id", id));
-    if(this.permissionRepository.existsByApiPathAndMethod(request.getApiPath(), request.getMethod())){
+    .orElseThrow(() -> new ResourceNotFoundException("Permission", "id", id));
+    if(this.permissionRepository.existsByApiPathAndMethodAndIdNot(request.getApiPath(), request.getMethod(),id)){
         throw new ResourceAlreadyExistException("Permission",
         "Api + Method",
         request.getApiPath() + " " + request.getMethod());
@@ -54,6 +55,7 @@ public class PermissionServiceImpl implements PermissionService {
     }
 
     @Override
+    @Transactional (readOnly = true)
     public PermissionResponseDTO getById(Long id) {
         Permission permission = this.permissionRepository.findById(id)
         .orElseThrow(() -> new ResourceNotFoundException("Permission", "id", id));
@@ -61,6 +63,7 @@ public class PermissionServiceImpl implements PermissionService {
     }
 
     @Override
+    @Transactional (readOnly = true)
     public Page<PermissionResponseDTO> getAllPermission(Pageable pageable, PermissionFilterDTO filter) {
         //formatter:off
         Specification<Permission> spec = Specification.allOf(
@@ -74,6 +77,7 @@ public class PermissionServiceImpl implements PermissionService {
     }
 
     @Override 
+    @Transactional 
     public void deleteById(long id){
         this.permissionRepository.findById(id)
         .orElseThrow(() -> new ResourceNotFoundException("Permission", "id", id));

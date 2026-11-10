@@ -16,6 +16,8 @@ public interface RoleService {
 
     RoleResponseDTO update(Long id, RoleRequestDTO request);
 
+    RoleResponseDTO getById(Long id);
+
     Page<RoleResponseDTO>  getAll(Pageable pageable, RoleFilterDTO filter);
 
     void delete(Long id);

@@ -8,4 +8,5 @@ import org.springframework.stereotype.Repository;
 public interface PermissionRepository extends JpaRepository<Permission, Long>
 ,JpaSpecificationExecutor<Permission> {
     boolean existsByApiPathAndMethod(String apiPath, String method);
+    boolean existsByApiPathAndMethodAndIdNot(String apiPath, String method, Long id);
 }

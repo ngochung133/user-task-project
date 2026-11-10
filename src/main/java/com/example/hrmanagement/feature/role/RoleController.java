@@ -46,6 +46,12 @@ public class RoleController {
         return ApiResponse.success("Delete successfully");
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getRoleById(@PathVariable long id){
+        RoleResponseDTO dto = roleService.getById(id);
+        return ApiResponse.success(dto);
+    }
+
     @GetMapping
     public ResponseEntity<?> getAllRole(Pageable pageable, @ModelAttribute RoleFilterDTO filter) {
         Page<RoleResponseDTO> listRole = this.roleService.getAll(pageable, filter);

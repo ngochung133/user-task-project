@@ -4,7 +4,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
-
+import org.springframework.transaction.annotation.Transactional;
 import com.example.hrmanagement.feature.company.dto.CompanyFilterDTO;
 import com.example.hrmanagement.feature.company.dto.CompanyRequestDTO;
 import com.example.hrmanagement.exception.ResourceAlreadyExistException;
@@ -18,6 +18,8 @@ import lombok.RequiredArgsConstructor;
 public class CompanyServiceImpl implements CompanyService {
     private final CompanyRepository companyRepository;
 
+    @Override 
+    @Transactional 
     public CompanyResponseDTO create(CompanyRequestDTO request){
         if(this.companyRepository.existsByName(request.name())){
             throw new ResourceAlreadyExistException("Company", "Name", request.name());
@@ -31,10 +33,12 @@ public class CompanyServiceImpl implements CompanyService {
         return CompanyResponseDTO.fromEntity(company);
     }
     
+    @Override 
+    @Transactional 
     public CompanyResponseDTO update(Long id, CompanyRequestDTO request){
         Company companyInDb = this.companyRepository.findById(id)
         .orElseThrow(() -> new ResourceNotFoundException("Company", "id", id));
-        if(this.companyRepository.existsByName(request.name())){
+        if(this.companyRepository.existsByNameAndIdNot(request.name(),id)){
             throw new ResourceAlreadyExistException("Company", "name", request.name());
         }
         companyInDb.setName(request.name());
@@ -45,11 +49,23 @@ public class CompanyServiceImpl implements CompanyService {
         return CompanyResponseDTO.fromEntity(companyInDb);
     }
 
+    @Override 
+    @Transactional (readOnly = true)
+    public CompanyResponseDTO getById(Long id){
+        Company company = this.companyRepository.findById(id)
+        .orElseThrow(() -> new ResourceNotFoundException("Company", "id", id));
+        return CompanyResponseDTO.fromEntity(company);
+    }
+
+    @Override 
+    @Transactional 
     public void delete(Long id){
         companyRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Company", "id", id));
         this.companyRepository.deleteById(id);
     }
 
+    @Override 
+    @Transactional (readOnly = true)
     public Page<CompanyResponseDTO> getAll(Pageable pageable, CompanyFilterDTO filter){
         CompanySpecification specification = new CompanySpecification();
         Specification<Company> spec = Specification.allOf(

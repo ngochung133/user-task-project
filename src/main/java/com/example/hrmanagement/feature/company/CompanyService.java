@@ -15,6 +15,8 @@ public interface CompanyService {
 
     CompanyResponseDTO update(Long id,CompanyRequestDTO request);
 
+    CompanyResponseDTO getById(Long id);
+
     Page<CompanyResponseDTO> getAll(Pageable pageable, CompanyFilterDTO filter);
 
     void delete(Long id);

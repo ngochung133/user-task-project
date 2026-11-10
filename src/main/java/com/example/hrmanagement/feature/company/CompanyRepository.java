@@ -9,4 +9,5 @@ public interface CompanyRepository extends JpaRepository<Company, Long>
 ,JpaSpecificationExecutor<Company> {
     
     boolean existsByName(String name);
+    boolean existsByNameAndIdNot(String name,Long id);
 }
