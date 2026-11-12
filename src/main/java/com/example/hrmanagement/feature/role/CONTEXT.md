@@ -25,7 +25,7 @@ Chưa có `GET /api/v1/roles/{id}`. Nguồn: [controller](RoleController.java).
 
 - [RoleRequestDTO](dto/RoleRequestDTO.java) là record dùng chung cho create/update. `name`, `description` có `@NotBlank`; `permissionIds` là `Set<@Positive @NotNull Long>` với `@NotNull` trên tập. Tập rỗng hợp lệ, thiếu/null tập không hợp lệ. DTO chưa có `@Size`, mặc dù cột name/description giới hạn 255 ký tự. Cả POST và PUT dùng `@Valid`.
 - [RoleResponseDTO](dto/RoleResponseDTO.java) có `id`, `name`, `description`, **`permisisons`**, `createdAt`, `updatedAt`. `permisisons` là tên viết sai đang tồn tại trong record, chứa danh sách `PermissionResponseDTO`, không chỉ ID. `fromEntity()` đọc quan hệ Permission và lấy `role.getUpdateAt()` cho `updatedAt`. Chưa có bước sắp xếp danh sách quyền.
-- [PageResponseDTO](../../dto/PageResponseDTO.java) trả `content`, `page`, `size`, `totalElements`, `totalPages`, `hasNext`, `hasPrevious`; page trả ra bắt đầu từ 1. [Cấu hình HTTP](../../../../../../../../src/main/resources/application.properties) dùng page bắt đầu từ 1, size mặc định 10, tối đa 100. Role chưa tự đặt sort mặc định hoặc tiêu chí phụ.
+- [PageResponseDTO](../../dto/PageResponseDTO.java) trả `content`, `page`, `size`, `totalElements`, `totalPages`, `hasNext`, `hasPrevious`; page trả ra bắt đầu từ 1. [Cấu hình HTTP](../../../../../../../../src/main/resources/application.yml) dùng page bắt đầu từ 1, size mặc định 10, tối đa 100. Role chưa tự đặt sort mặc định hoặc tiêu chí phụ.
 - [GlobalExceptionHandler](../../exception/GlobalExceptionHandler.java) ánh xạ validation thành 400, `ResourceNotFoundException` thành 404 và `ResourceAlreadyExistException` thành 409. Đây là luồng xử lý theo mã, chưa phải kết quả HTTP Role đã chạy.
 
 ### Kiểm tra đầy đủ Permission trước khi ghi

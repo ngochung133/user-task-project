@@ -50,9 +50,14 @@ public class GlobalExceptionHandler {
         return ApiResponse.unauthorized("Email hoặc mật khẩu không chính xác");
      }
 
-     @ExceptionHandler(Exception.class)
+   @ExceptionHandler(Exception.class)
      public ResponseEntity<ApiResponse<Void>> handleGeneral(Exception ex) {
         log.error("Unexpected exception", ex);
         return ApiResponse.error("Đã xảy ra lỗi hệ thống, vui lòng thử lại sau");
      }
+
+   @ExceptionHandler(FileUploadException.class)
+   public ResponseEntity<?> handleFileUpload(FileUploadException ex){
+      return ApiResponse.badRequest(ex.getMessage());
+   }
 }

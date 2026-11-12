@@ -1,0 +1,36 @@
+spring:
+  application:
+    name: hr-management
+  datasource:
+    url: "jdbc:mysql://${MYSQL_HOST:localhost}:3306/user-task?createDatabaseIfNotExist=true"
+    username: "root"
+    password: "hung133"
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+  data:
+    web:
+      pageable:
+        default-page-size: 10
+        max-page-size: 100
+        # true để bắt đầu từ trang 1, false để bắt đầu từ trang 0.
+        one-indexed-parameters: true
+  servlet:
+    multipart:
+      max-file-size: 8MB
+      max-request-size: 10MB
+
+server:
+  port: 8080
+
+jwt:
+  secret: "kS0/nyStK4BDPc+YbR9cf04RsbZ74heK6u7i/8I0FxY="
+  expiration: 86400000
+
+app:
+  upload:
+    base-dir: ./uploads
+    max-file-size: 8242880
+    allowed-extensions: [jpg, jpeg, png, gif, webp]
+    allowed-folders: [avatars, logos]

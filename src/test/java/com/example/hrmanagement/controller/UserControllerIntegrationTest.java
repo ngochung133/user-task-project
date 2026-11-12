@@ -32,7 +32,7 @@ import tools.jackson.databind.ObjectMapper;
 @SpringBootTest 
 @Transactional 
 @AutoConfigureMockMvc 
-//	Kích hoạt cấu hình dành cho môi trường test, ví dụ application-test.properties
+//	Kích hoạt cấu hình dành cho môi trường test, ví dụ application-test.yml
 @ActiveProfiles ("test")
 @Import(MySqlTestConfiguration.class)
 class UserControllerIntegrationTest {

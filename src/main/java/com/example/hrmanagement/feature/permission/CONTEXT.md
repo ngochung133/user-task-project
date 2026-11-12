@@ -26,7 +26,7 @@ Nguồn: [controller](PermissionController.java), [service](PermissionServiceImp
 
 - [PermissionRequestDTO](dto/PermissionRequestDTO.java) hiện là class dùng Lombok (`@Getter`, `@Setter`, `@NoArgsConstructor`, `@AllArgsConstructor`), chưa chuyển sang Java `record`. Cả bốn trường `name`, `apiPath`, `method`, `module` đều có `@NotBlank` và `@Size(max = 255)`.
 - [PermissionResponseDTO](dto/PermissionResponseDTO.java) là `record` có `@Builder`, gồm `id`, `name`, `apiPath`, `method`, `module`, `createdAt`, `updatedAt`. Phương thức `fromEntity(Permission)` lấy `permission.getUpdateAt()` gán cho `updatedAt`.
-- [PageResponseDTO](../../dto/PageResponseDTO.java) trả `content`, `page` (bắt đầu từ 1), `size`, `totalElements`, `totalPages`, `hasNext`, `hasPrevious` theo [cấu hình HTTP](../../../../../../../../src/main/resources/application.properties).
+- [PageResponseDTO](../../dto/PageResponseDTO.java) trả `content`, `page` (bắt đầu từ 1), `size`, `totalElements`, `totalPages`, `hasNext`, `hasPrevious` theo [cấu hình HTTP](../../../../../../../../src/main/resources/application.yml).
 - [GlobalExceptionHandler](../../exception/GlobalExceptionHandler.java) ánh xạ lỗi `@Valid` thành 400, `ResourceNotFoundException` thành 404 và `ResourceAlreadyExistException` thành 409.
 
 ### Nghiệp vụ và kiểm tra trùng lặp

@@ -35,6 +35,16 @@
 - Khi triển khai Role, để Role sở hữu quan hệ ManyToMany qua bảng `role_permission`, với khóa chính ghép và FK tới hai bảng. Kiểm tra tất cả Permission ID trước khi lưu danh sách trong cùng giao dịch. Tránh cascade xóa thực thể ở đầu kia. Chốt cách xử lý Permission còn được gán trước khi triển khai DELETE.
 - Dùng MySQL Testcontainers qua `MySqlTestConfiguration`. Kiểm tra method/module sai trả `400`, dữ liệu trùng sau chuẩn hóa trả `409`, `PUT` dùng ID trên URL, audit timestamp đọc lại đúng và phân trang giữ thứ tự khi giá trị sort bị trùng. Khi kiểm thử liên kết Role, xác nhận một Permission ID không tồn tại khiến toàn bộ thao tác gán thất bại.
 
+## Upload logo công ty
+
+Áp dụng khi triển khai upload logo theo [ADR-002](decisions/002-file-upload-strategy.md). ADR mô tả hợp đồng đề xuất.
+
+- Tách upload ảnh và ghi Company thành hai bước. Upload trả tên file do server sinh. Client dùng tên đó cho trường `logo` trong request tạo hoặc cập nhật Company.
+- Chỉ nhận thư mục trong allowlist, với `logos` là giá trị cho luồng logo. Kiểm tra file rỗng, dung lượng, phần mở rộng và nội dung ảnh thực tế. Dùng giới hạn multipart ở tầng HTTP và kiểm tra lại dung lượng trong service.
+- Lấy thư mục gốc từ cấu hình. Sinh tên file duy nhất trên server, chuẩn hóa đường dẫn đích và kiểm tra file nằm trong thư mục logo trước khi ghi hoặc đọc. Hai request trùng tên gốc phải lưu được hai file riêng.
+- Yêu cầu Bearer JWT cho upload. Đặt rule của endpoint upload trước matcher public `/api/v1/**`. Chỉ mở quyền đọc công khai cho route logo đã được chốt và kiểm thử.
+- Kiểm thử upload và đọc ảnh hợp lệ, lưu đúng file, thiếu multipart part, file quá lớn, nội dung giả ảnh, path traversal, trùng tên gốc và request thiếu JWT.
+
 ## Dữ liệu và bảo mật
 
 - Khai báo constraint DB cho bất biến như email duy nhất hoặc cặp đường dẫn/phương thức duy nhất. Kiểm tra trước để trả lỗi rõ, dùng constraint để giữ đúng khi có ghi đồng thời.
