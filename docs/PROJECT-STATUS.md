@@ -1,23 +1,35 @@
 # Tiến độ HR Management API
 
-Cập nhật 2026-11-10. Baseline lấy từ mã và test trong repo `hr-management`, HEAD `7189352` (`Role`). Phiên này chỉ đối chiếu tĩnh và báo cáo có sẵn, không chạy lại test.
+Cập nhật 2026-11-12. HEAD hiện tại `f1fb124` (`upload file`). Phiên này đối chiếu tĩnh mã File, cấu hình, diff và báo cáo kiểm thử có sẵn; không chạy build, test hoặc HTTP. Các ghi nhận ngày trước là lịch sử, không phải bằng chứng kiểm thử HEAD hiện tại.
 
 ## Hiện trạng
 
 | Hạng mục | Mức triển khai |
 |---|---|
 | Nền tảng | Java 25, Spring Boot 4.1.1, Maven Wrapper, Spring MVC, JPA/MySQL, Jakarta Validation, Security Resource Server, response wrapper và global advice. |
-| User | Có list/create/update/delete, BCrypt và response DTO. Còn nhận entity làm request, thiếu get theo ID, phân trang và quan hệ HR. |
+| User | Mã hiện có request DTO với `@Valid`, list phân trang/lọc và liên kết Company/Role trong service; route vẫn là `/users`, chưa có GET theo ID trong controller. Chưa kiểm chứng lại hợp đồng và test sau thay đổi. |
 | Auth | Có login bằng email/mật khẩu và Bearer JWT HS256, role cố định `USER`. Chưa có profile `/me`, refresh, logout hay phân quyền theo dữ liệu. |
 | Permission | Có CRUD, unique `(api_path, method)`, phân trang qua `PageResponseDTO` và Specification lọc name/method/module; mẫu LIKE đã sửa. Postman đã xác nhận một số luồng HTTP chạy được, nhưng PUT còn truyền ID null và trả 500; chưa hoàn thiện validation/chuẩn hóa và kiểm thử tự động trong cây test. |
 | Kiểm thử | Cây nguồn có 10 unit test User, 15 integration test User, 3 integration test Auth và 3 integration test OpenAPI; integration test dùng MySQL Testcontainers 8.4. Bốn báo cáo Surefire có sẵn, sửa lần cuối ngày 2026-11-08, ghi tổng 31 test, 0 failure/error/skipped; chưa xác nhận lại trên HEAD hiện tại. Chưa có test Company/Permission/Role trong cây test. Postman 2026-11-08: 66/73 assertion đạt trên 34 request; không thay thế suite JUnit/MySQL Testcontainers. |
 | Company | Đang triển khai: POST/GET list và PUT/DELETE theo ID ở `/api/v1/companies`; entity, repository, service, request/response record, lọc và phân trang. Request có `@NotBlank`, `@Size(max = 255)` cho bốn field. Postman xác nhận các luồng tạo/list/sửa đổi tên/xóa và validation; update giữ nguyên tên còn trả 409. Chưa có GET theo ID hoặc quan hệ User–Company. |
 | Role | Đang triển khai: POST/GET list và PUT/DELETE theo ID ở `/api/v1/roles`, lọc name/description/permissionIds, phân trang, unique tên và quan hệ ManyToMany Role–Permission. Create/update kiểm tra mọi Permission ID trước khi ghi trong transaction; chưa kiểm chứng HTTP/MySQL hoặc rollback. Chưa có GET theo ID hoặc test Role. |
 | OpenAPI | Có springdoc 3.2.0, cấu hình Swagger UI/OpenAPI public, Bearer JWT và đánh dấu login/create User là public. Có 3 integration test cùng báo cáo đạt có sẵn; chưa chạy lại trên HEAD có Role. |
-| RBAC, Upload | Chưa triển khai trong repo này; có dữ liệu Role–Permission nhưng chưa tích hợp phân quyền theo dữ liệu. |
-| Kiến trúc | Auth, User, Permission, Company và Role nằm trong `feature/`. Các thành phần dùng chung nằm ở cấp ứng dụng. User có service interface, implementation và mapper. Permission/Role ánh xạ response bằng `fromEntity()`. Test tổ chức theo trách nhiệm. Xem [ARCHITECTURE.md](ARCHITECTURE.md). |
+| RBAC | Chưa tích hợp phân quyền theo dữ liệu. Whitelist hiện mở `/api/v1/**` và `/uploads/**`; không suy ra route HR yêu cầu JWT từ báo cáo cũ. |
+| Upload | Đang triển khai: POST multipart `/api/v1/files` trả 201, ghi file xuống đĩa và resource handler `/uploads/**`. Còn thiếu kiểm tra nội dung ảnh, UUID/chống ghi đè, chuẩn hóa/kiểm tra đường dẫn, phân loại lỗi và test; hợp đồng hiện khác ADR-002. |
+| Kiến trúc | Auth, User, Permission, Company, Role và File nằm trong `feature/`. Các thành phần dùng chung nằm ở cấp ứng dụng. User có service interface, implementation và mapper. Permission/Role ánh xạ response bằng `fromEntity()`. Test tổ chức theo trách nhiệm. Xem [ARCHITECTURE.md](ARCHITECTURE.md). |
 
 Đối chiếu [POM](../pom.xml), [mã hiện tại](../src/main/java/com/example/hrmanagement/), [test](../src/test/java/com/example/hrmanagement/) và [API hiện hành](API_SPEC.md).
+
+## Ghi nhận phiên 2026-11-12
+
+- **Căn cứ và phạm vi:** Git root đúng repo `hr-management`; HEAD `f1fb124` (`upload file`), sau `a2e0f62` (`update user crud`) và `7adc4b7` (`improve crud`). Đã đối chiếu diff từ baseline `7189352`, mã File/cấu hình và cây test. Trước khi cập nhật, working tree có thay đổi `pom.xml`, hai YAML cấu hình và thư mục `src/main/resources/db/` chưa theo dõi. Phiên này chỉ sửa status, không thay source, stage, commit hoặc push. Các hàng Company/Permission/Role ở bảng trên giữ ghi nhận cũ; xem mã hiện tại trước khi dùng chúng làm hợp đồng.
+- **Upload đã có:** `POST /api/v1/files` nhận multipart `file` và `folder`, gọi service interface và trả `201` qua `ApiResponse.created`. Service kiểm tra file rỗng, tên thiếu, đuôi file (đã gọi `toLowerCase()`), dung lượng và folder trong allowlist; tạo thư mục rồi ghi file. Response hiện gồm `fileName`, `folder`, `fileUrl`, `size`, **`uploadAt`**. `FileUploadException` đã nhận một thông báo và được advice trả `400`. [Controller](../src/main/java/com/example/hrmanagement/feature/file/FileController.java) · [Service](../src/main/java/com/example/hrmanagement/feature/file/FileServiceImpl.java)
+- **Đọc ảnh và quyền hiện tại:** `WebMvcConfig` đã có `@Configuration`, đăng ký `/uploads/**` tới `file:${app.upload.base-dir}/`. Security whitelist mở cả `/api/v1/**` và `/uploads/**`, nên upload và đọc ảnh hiện không yêu cầu JWT. Đây là hiện trạng mã, khác lựa chọn ban đầu trong phiên học là đọc logo cần JWT; người học sau đó đã mở whitelist để xem ảnh bằng browser, chưa cập nhật ADR cho chính sách cuối cùng. Không xác nhận HTTP thành công từ cấu hình hoặc file ảnh có trên đĩa. [Web MVC](../src/main/java/com/example/hrmanagement/config/WebMvcConfig.java) · [Security](../src/main/java/com/example/hrmanagement/config/SecurityConfig.java)
+- **Upload còn dở:** tên lưu vẫn là timestamp cộng tên đã thay ký tự, dùng `REPLACE_EXISTING` nên request cùng mili giây/cùng tên có thể ghi đè; input stream chưa được đóng bằng try-with-resources. Chưa xác minh nội dung ảnh thật, từ chối tên gốc chứa thành phần đường dẫn hoặc chuẩn hóa/kiểm tra đường dẫn đích nằm trong thư mục được phép. `fileUrl` còn ghép từ đường dẫn ổ đĩa thay vì route HTTP; DTO dùng `uploadAt` thay `uploadedAt`. Lỗi dung lượng và lỗi ổ đĩa đều đi qua exception trả `400`, có nối chi tiết exception vào response; chưa xử lý riêng `413` và lỗi thiếu multipart part. Chưa có File CONTEXT hoặc test upload/đọc ảnh trong cây nguồn.
+- **Cấu hình và ADR:** YAML hiện cho file HTTP tối đa `8MB`, request `10MB`, service tối đa `8242880` byte (khác 8 MiB), đuôi `jpg/jpeg/png/gif/webp` và folder `avatars/logos`. ADR-002 vẫn là **đề xuất**, nêu 5 MiB/6 MiB, JPEG/PNG/GIF và tên UUID. Cần thống nhất giới hạn, phạm vi logo/avatar, cách kiểm tra WebP, quyền đọc/upload và vòng đời file sau thay logo/xóa Company hoặc upload chưa gắn bản ghi; chưa coi ADR đã được triển khai đầy đủ.
+- **Thay đổi ngoài File được quan sát:** User hiện dùng request DTO, phân trang/lọc và service tham chiếu Company/Role; chưa review đầy đủ hay xác nhận các luồng mới. Working tree đang thêm dependency Flyway, `V1__create_user_table.sql` và đổi Hibernate sang `validate` cả profile chính/test. Cấu hình `flyway` hiện nằm dưới `spring.datasource`, chưa đúng prefix `spring.flyway`; chưa kiểm chứng migration hoặc khởi động trên database hiện hữu. Đây là việc đang dở, không phải migration đã hoàn thành.
+- **Bằng chứng kiểm thử:** bốn XML Surefire có sẵn vẫn sửa ngày 2026-11-08, tổng 31 test, 0 failure/error/skipped; không có kết quả mới cho HEAD `f1fb124`. Chưa có test File/Company/Permission/Role trong cây test được kiểm tra. Không chạy Maven, Postman, browser hoặc HTTP trong lượt cập nhật này.
+- **Task tiếp theo:** tiếp tục hướng dẫn người học tự sửa File theo từng bước: UUID và bỏ ghi đè, đóng stream, sửa URL/field response; bổ sung validation nội dung và đường dẫn; chốt và kiểm thử security, lỗi 400/401/404/413/500. Thêm test lưu/đọc thật ở thư mục tạm, file giả ảnh, path traversal, hai file cùng tên và quyền truy cập. Sau khi có kết quả, cập nhật API/ADR/context theo hợp đồng thực tế. Tách việc Flyway thành phạm vi riêng trước khi tuyên bố schema hoặc suite test chạy được.
 
 ## Ghi nhận phiên 2026-11-10
 
@@ -65,7 +77,7 @@ Cập nhật 2026-11-10. Baseline lấy từ mã và test trong repo `hr-managem
 3. **Permission và Company · Đang làm một phần.** Permission và Company đã có mã CRUD, phân trang và bộ lọc; đã chạy một lượt Postman nhưng còn lỗi update và thiếu kiểm thử tự động Company/Permission, chưa hoàn tất hợp đồng và xử lý xung đột. Hoàn thiện từng module với DB constraint và test JWT.
 4. **Role và User HR · Đang làm một phần.** Role đã có mã CRUD (chưa GET theo ID), lọc/phân trang và quan hệ Role–Permission, nhưng chưa có test và chưa chốt đầy đủ hợp đồng. Hoàn thiện Role trước khi thêm User–Role, User–Company và API User có version theo hợp đồng được chốt.
 5. **Auth hoàn chỉnh.** Thêm profile, đăng ký theo chính sách được duyệt, refresh/logout theo ADR được duyệt, rồi tích hợp kiểm tra quyền theo route và HTTP method.
-6. **Upload và hoàn thiện.** Bổ sung avatar/logo theo ADR được duyệt, sau đó rà API, migration và test hồi quy.
+6. **Upload và hoàn thiện · Đang làm một phần.** Có upload đĩa và resource handler; cần hoàn thiện validation, lưu file, quyền truy cập, hợp đồng theo ADR được chốt và test hồi quy trước khi ghi hoàn thành.
 
 ## Điểm cần chốt khi đến phạm vi tương ứng
 
