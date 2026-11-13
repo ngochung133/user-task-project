@@ -2,11 +2,41 @@
 
 ## Hiện trạng từ mapping JPA
 
-`User` map vào bảng `users` với `id` kiểu Long/IDENTITY, `name`, `email`, `password` và `address`. Service kiểm tra email trùng và mã hóa mật khẩu bằng BCrypt. Mapping hiện chưa khai báo unique constraint cho email, audit timestamp hay quan hệ HR. Schema của một database đã chạy có thể khác mapping hiện tại, nên kiểm tra schema thật trước khi viết migration. [User.java](../src/main/java/com/example/hrmanagement/feature/user/User.java) · [UserServiceImpl.java](../src/main/java/com/example/hrmanagement/feature/user/UserServiceImpl.java)
+Schema được quản lý bằng **Flyway SQL migration**; Hibernate dùng `ddl-auto: validate` để đối chiếu mapping JPA, không tạo hoặc cập nhật bảng. Cả cấu hình mặc định và profile test đều dùng `validate`. [Cấu hình chính](../src/main/resources/application.yml) · [Cấu hình test](../src/test/resources/application-test.yml)
 
-Profile mặc định dùng Hibernate `ddl-auto=update`. Test dùng `create-drop` trên MySQL container. Repo chưa có migration versioned. [Cấu hình mặc định](../src/main/resources/application.yml) · [Cấu hình test](../src/test/resources/application-test.yml)
+Migration hiện có: [`V1__init_schema.sql`](../src/main/resources/db/migration/V1__init_schema.sql), tạo sáu bảng:
+
+| Bảng | Nội dung trong V1 |
+|---|---|
+| `companies` | Thông tin công ty, logo, audit; unique `name`. |
+| `permissions` | Tên, path, method, module và audit; unique `(api_path, method)`, `api_path` dùng collation `utf8mb4_0900_bin`. |
+| `roles` | Tên, mô tả và audit; unique `name`. |
+| `users` | Tên, email, password, address, age, avatar, gender và FK `company_id` nullable. Chưa có unique email hoặc audit. |
+| `role_permission` | Hai FK và khóa chính ghép `(role_id, permission_id)`. |
+| `user_role` | Hai FK tới User và Role; V1 chưa khai báo khóa chính hoặc unique cho cặp ID. |
+
+Đây là nội dung SQL và mapping đã đọc, chưa phải xác nhận migration đã chạy thành công hoặc schema database đang chạy khớp hoàn toàn. Mapping User hiện có quan hệ Company/Role. File upload lưu trên đĩa, không có bảng File trong V1.
+
+## Cấu hình Flyway hiện tại
+
+POM khai báo `spring-boot-starter-flyway` và `flyway-mysql`. Cấu hình chính dùng:
+
+```yaml
+spring:
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: false
+  jpa:
+    hibernate:
+      ddl-auto: validate
+```
+
+Profile test kế thừa cấu hình Flyway và dùng MySQL 8.4 Testcontainers qua `MySqlTestConfiguration`. Mục tiêu là chạy cùng migration trên database test mới, rồi để Hibernate validate. Chưa chạy lại integration test sau chuyển đổi này.
 
 ## Mô hình HR đích
+
+Bảng sau giữ yêu cầu đích; đối chiếu phần V1 ở trên để biết phần đã có và khoảng cách còn lại.
 
 | Bảng | Dữ liệu và ràng buộc cần thiết |
 |---|---|
@@ -20,6 +50,11 @@ Profile mặc định dùng Hibernate `ddl-auto=update`. Test dùng `create-drop
 
 User → Company là ManyToOne, User ↔ Role và Role ↔ Permission là ManyToMany. Dùng LAZY khi có thể. Xóa quan hệ nối phải giữ nguyên thực thể ở đầu kia. Trước khi triển khai xóa Company hoặc User, chốt xử lý FK, hồ sơ nhân sự và token còn hiệu lực trong cùng thay đổi.
 
-## Khi triển khai migration
+## Quy trình thay đổi schema
 
-Đối chiếu schema thật và dữ liệu hiện hữu, đặc biệt email null/trùng. Chốt cách backfill và tạo constraint bằng migration có phiên bản trước khi dùng schema đích trong môi trường chung. Xác nhận trên MySQL test riêng, bao gồm kiểm tra migration khi đã có bản ghi cũ.
+- Thêm SQL vào `src/main/resources/db/migration/` theo mẫu `V<N>__<description>.sql`, dùng phiên bản tiếp theo chưa tồn tại. Sửa entity và migration trong cùng thay đổi.
+- Sau khi migration đã được áp dụng trên môi trường dùng chung, giữ nguyên tên và nội dung; thay đổi tiếp theo bằng migration mới để giữ lịch sử và checksum.
+- Flyway ghi lịch sử trong `flyway_schema_history`. Kiểm tra log khởi động và lịch sử migration; Hibernate validate đạt không thay thế kiểm tra đầy đủ FK, unique constraint và dữ liệu nghiệp vụ.
+- Với database mới, chạy ứng dụng hoặc integration test trên schema rỗng để kiểm tra V1 và các migration sau. Test bắt buộc dùng MySQL cô lập, không dùng H2 hoặc datasource mặc định thay thế.
+- Với database cũ do Hibernate tạo, đối chiếu schema/dữ liệu, sao lưu và chốt baseline hoặc migration chuyển tiếp trước khi áp dụng. `baseline-on-migrate: false` không tự nhận schema cũ làm baseline; không bật baseline tự động hoặc xóa database để bỏ qua khác biệt.
+- Trước khi thêm constraint, kiểm tra/backfill dữ liệu cũ, nhất là email null/trùng. Kiểm thử nâng cấp từ phiên bản trước và trạng thái dữ liệu sau nâng cấp; không chỉ kiểm tra khởi tạo database rỗng.

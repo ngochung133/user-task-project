@@ -2,12 +2,15 @@ spring:
   application:
     name: hr-management
   datasource:
-    url: "jdbc:mysql://${MYSQL_HOST:localhost}:3306/user-task?createDatabaseIfNotExist=true"
+    url: "jdbc:mysql://${MYSQL_HOST:localhost}:3306/hr-managerment?createDatabaseIfNotExist=true"
     username: "root"
     password: "hung133"
   flyway:
+    #bật flyway
     enabled: true
+    #địa điểm file code
     locations: classpath:db/migration
+    #false tắt baseline, true bật baseline, nếu có db mà chưa có history => false báo lỗi, phải dùng true
     baseline-on-migrate: false
   jpa:
     hibernate:
@@ -37,4 +40,8 @@ app:
     base-dir: ./uploads
     max-file-size: 8242880
     allowed-extensions: [jpg, jpeg, png, gif, webp]
-    allowed-folders: [avatars, logos]
+    allowed-folders:
+      [avatars, logos]
+      #quyết định có tạo một Spring Bean hay khong
+  seed:
+    enabled: true

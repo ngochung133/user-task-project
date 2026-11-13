@@ -48,12 +48,13 @@
 ## Dữ liệu và bảo mật
 
 - Khai báo constraint DB cho bất biến như email duy nhất hoặc cặp đường dẫn/phương thức duy nhất. Kiểm tra trước để trả lỗi rõ, dùng constraint để giữ đúng khi có ghi đồng thời.
+- Flyway quản lý schema bằng SQL có phiên bản trong `src/main/resources/db/migration/`; Hibernate dùng `ddl-auto=validate` ở môi trường chính và test. Thay đổi mapping cần migration tương ứng. Không sửa migration đã áp dụng trên môi trường dùng chung; thêm phiên bản mới. Với DB cũ, đối chiếu và chốt baseline/chuyển tiếp trước khi áp dụng. Xem [quy trình migration](DATABASE.md#quy-trình-thay-đổi-schema).
 - Entity mới có mapping bảng/cột rõ ràng, enum dùng `EnumType.STRING`, audit dùng `Instant` do Hibernate quản lý và relation mặc định LAZY khi có thể. Kiểm tra dữ liệu hiện hữu và ảnh hưởng của migration trước khi thêm constraint.
 - Dùng BCrypt cho mật khẩu. Đọc secret từ môi trường hoặc secret store cho cấu hình mới. Tách xác thực JWT và phân quyền. Giữ Bearer JWT qua Spring Security Resource Server. Thay đổi thuật toán, TTL, public routes hoặc cookie/CSRF là thay đổi riêng có test và quyết định ghi rõ. [Kiến trúc bảo mật](ARCHITECTURE.md#xác-thực-và-phân-quyền)
 
 ## Kiểm thử và tài liệu
 
 - Dưới `src/test/java/com/example/hrmanagement/`, đặt integration test HTTP trong `controller/`, unit test nghiệp vụ trong `service/`, helper trong `helper/` và cấu hình test trong `config/`. Dùng JUnit/Mockito và MockMvc. Đặt tên test theo hành vi, thêm `@DisplayName`. Bao phủ thành công, input lỗi, dữ liệu thiếu/trùng và quyền truy cập khi áp dụng. Kiểm tra cả trạng thái lưu nếu endpoint ghi dữ liệu.
-- Integration test dùng profile `test`, MySQL Testcontainers qua `MySqlTestConfiguration` và Docker. Chỉ dùng `create-drop` trên schema test cô lập. Cấm H2 hoặc chuyển test sang datasource mặc định khi Docker thiếu. Chạy `./mvnw test` khi đủ điều kiện và báo đúng phần chạy được.
+- Integration test dùng profile `test`, MySQL Testcontainers qua `MySqlTestConfiguration` và Docker. Chạy cùng Flyway migration trên database container cô lập và dùng Hibernate `validate`; không chuyển sang `update` hoặc `create-drop` để né lỗi migration. Cấm H2 hoặc chuyển test sang datasource mặc định khi Docker thiếu. Chạy `./mvnw test` khi đủ điều kiện và báo đúng phần chạy được.
 - Khi mục tiêu của integration test là xác minh commit hoặc rollback của service, gọi service qua bean Spring hoặc qua HTTP từ bên ngoài transaction do test quản lý. Kiểm tra trạng thái DB sau khi lời gọi kết thúc và dọn dữ liệu test riêng.
 - Cập nhật [API_SPEC.md](API_SPEC.md) và [DATABASE.md](DATABASE.md) theo hợp đồng đã thay đổi. Ghi `CONTEXT.md` cho module có quyết định đáng lưu và ADR cho thay đổi kiến trúc. Ghi tiến độ bằng `$update-status` khi được yêu cầu hoặc khi workflow feature cần.

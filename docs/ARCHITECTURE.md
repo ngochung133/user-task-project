@@ -40,3 +40,9 @@ Permission, Company, Role và File sẽ nằm trong các package riêng dưới 
 **Hiện tại.** Spring Security dùng BCrypt, JWT HS256 qua Nimbus, Bearer Resource Server và session stateless. Người dùng đăng nhập qua email. Token có subject là email và claim `roles` chứa authority `ROLE_USER`, sinh từ role `USER` gán cố định. Chain kiểm tra đã xác thực, chưa có policy Role–Permission. Xem quyền truy cập từng route ở [API_SPEC.md](API_SPEC.md).
 
 **Đích.** Tách đăng ký khỏi tạo nhân sự do admin. Lấy role từ dữ liệu người dùng và kiểm tra permission theo HTTP method + route đã chuẩn hóa. Kiểm thử route có biến, truy cập ẩn danh và truy cập thiếu quyền. Tránh cấp quyền chỉ vì path có cùng tiền tố. Chốt chiến lược JWT và xác thực lại trước khi chuyển sang [refresh token](decisions/001-refresh-token-strategy.md).
+
+## Quản lý schema bằng Flyway
+
+Flyway là nguồn thay đổi schema có phiên bản qua SQL trong `src/main/resources/db/migration/`. V1 hiện khởi tạo Company, Permission, Role, User và hai bảng nối. Hibernate chỉ đối chiếu mapping bằng `ddl-auto=validate` ở cả profile chính và test. Không dựa vào Hibernate để tự tạo/cập nhật bảng.
+
+Integration test dùng MySQL Testcontainers và cùng bộ migration với ứng dụng. Cấu hình/migration đã có trong mã; chưa có lượt chạy mới xác nhận khởi tạo hoặc nâng cấp database. Với schema đã có dữ liệu, cần quy trình baseline/chuyển tiếp riêng. Xem [schema và quy trình migration](DATABASE.md).
