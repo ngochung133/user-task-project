@@ -20,6 +20,12 @@ Cập nhật 2026-11-12. HEAD hiện tại `f1fb124` (`upload file`). Phiên nà
 
 Đối chiếu [POM](../pom.xml), [mã hiện tại](../src/main/java/com/example/hrmanagement/), [test](../src/test/java/com/example/hrmanagement/) và [API hiện hành](API_SPEC.md).
 
+## Ghi nhận hoãn nhiệm vụ Auth 2026-11-15
+
+- **Nhiệm vụ 6 — email duy nhất: tạm hoãn theo yêu cầu người dùng.** Register hiện kiểm tra `existsByEmail()` trước khi lưu; migration V1–V4 chưa có unique constraint cho `users.email`. Hai request đồng thời vẫn có thể tạo email trùng. Đây là đối chiếu tĩnh mã và migration, chưa kiểm tra dữ liệu database đang chạy.
+- **Khi tiếp tục:** truy vấn email trùng và chốt xử lý dữ liệu hiện có; thêm migration unique email, đồng bộ mapping và xử lý xung đột thành `409`; kiểm thử đăng ký đồng thời trên MySQL cô lập. Chưa chạy truy vấn kiểm tra trùng, chưa sửa schema hoặc dữ liệu trong nhiệm vụ này.
+- **Nhiệm vụ tiếp theo:** hướng dẫn nhiệm vụ 7, validation password theo giới hạn 72 byte của BCrypt. Người học tự sửa mã; ghi chú này không triển khai nhiệm vụ 6 hoặc 7.
+
 ## Ghi nhận phiên 2026-11-12
 
 - **Căn cứ và phạm vi:** Git root đúng repo `hr-management`; HEAD `f1fb124` (`upload file`), sau `a2e0f62` (`update user crud`) và `7adc4b7` (`improve crud`). Đã đối chiếu diff từ baseline `7189352`, mã File/cấu hình và cây test. Trước khi cập nhật, working tree có thay đổi `pom.xml`, hai YAML cấu hình và thư mục `src/main/resources/db/` chưa theo dõi. Phiên này chỉ sửa status, không thay source, stage, commit hoặc push. Các hàng Company/Permission/Role ở bảng trên giữ ghi nhận cũ; xem mã hiện tại trước khi dùng chúng làm hợp đồng.

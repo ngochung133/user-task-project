@@ -33,15 +33,16 @@ server:
 
 jwt:
   secret: "kS0/nyStK4BDPc+YbR9cf04RsbZ74heK6u7i/8I0FxY="
-  expiration: 86400000
+  access-token-expiration: 864000000
+  refresh-expiration: 604800000
 
 app:
   upload:
     base-dir: ./uploads
     max-file-size: 8242880
     allowed-extensions: [jpg, jpeg, png, gif, webp]
-    allowed-folders:
-      [avatars, logos]
-      #quyết định có tạo một Spring Bean hay khong
+    allowed-folders: [avatars, logos]
+
+  #quyết định có tạo một Spring Bean hay khong
   seed:
-    enabled: true
+    enabled: false

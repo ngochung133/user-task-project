@@ -47,8 +47,15 @@ public class GlobalExceptionHandler {
 
      @ExceptionHandler(BadCredentialsException.class)
      public ResponseEntity<?> handleBadCredentials(BadCredentialsException ex) {
+        log.warn("Đăng nhập thất bại: email hoặc mật khẩu không chính xác");
         return ApiResponse.unauthorized("Email hoặc mật khẩu không chính xác");
      }
+
+   @ExceptionHandler(InvalidTokenException.class)
+   public ResponseEntity<ApiResponse<Void>> handleInvalidToken(InvalidTokenException ex) {
+      log.warn("InvalidTokenException: {}", ex.getMessage());
+      return ApiResponse.unauthorized(ex.getMessage());
+   }
 
    @ExceptionHandler(Exception.class)
      public ResponseEntity<ApiResponse<Void>> handleGeneral(Exception ex) {

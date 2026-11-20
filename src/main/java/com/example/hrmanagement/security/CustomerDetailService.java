@@ -1,5 +1,9 @@
 package com.example.hrmanagement.security;
 
+import java.util.List;
+
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -21,10 +25,14 @@ public class CustomerDetailService implements UserDetailsService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("Không tìm thấy user: " + email));
 
+        List<GrantedAuthority> authorities = user.getRoles().stream()
+        .map(role -> (GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role.getName())).toList();
+
         return org.springframework.security.core.userdetails.User.builder()
                 .username(user.getEmail())
                 .password(user.getPassword())
-                .roles("USER")
+                //.roles tu dong them ROLE_ khong phu hop danh cho permision => doi sang .authorities
+                .authorities(authorities)
                 .build();
     }
 }

@@ -1,0 +1,3 @@
+ALTER TABLE users
+    ADD COLUMN created_at DATETIME(6) NULL,
+    ADD COLUMN update_at DATETIME(6) NULL;

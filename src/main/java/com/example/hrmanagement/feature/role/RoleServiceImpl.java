@@ -15,6 +15,7 @@ import com.example.hrmanagement.feature.permission.PermissionRepository;
 import com.example.hrmanagement.feature.role.dto.RoleFilterDTO;
 import com.example.hrmanagement.feature.role.dto.RoleRequestDTO;
 import com.example.hrmanagement.feature.role.dto.RoleResponseDTO;
+import com.example.hrmanagement.security.PermissionAuthorizationManager;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 
@@ -24,6 +25,7 @@ public class RoleServiceImpl implements RoleService {
 
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
+    private final PermissionAuthorizationManager permissionAuthorizationManager;
 
     @Override 
     @Transactional 
@@ -46,6 +48,7 @@ public class RoleServiceImpl implements RoleService {
         role.setDescription(request.description());
         role.setPermissions(new HashSet<>(permissions));
         this.roleRepository.saveAndFlush(role);
+        this.permissionAuthorizationManager.loadCache();
         return RoleResponseDTO.fromEntity(role);
     }  
 
@@ -70,6 +73,7 @@ public class RoleServiceImpl implements RoleService {
         roleInDB.setDescription(request.description());
         roleInDB.setPermissions(new HashSet<>(permissions));
         this.roleRepository.saveAndFlush(roleInDB);
+        this.permissionAuthorizationManager.loadCache();
         return RoleResponseDTO.fromEntity(roleInDB);
     }
 
@@ -87,6 +91,8 @@ public class RoleServiceImpl implements RoleService {
         Role role = this.roleRepository.findById(id)
         .orElseThrow(() -> new ResourceNotFoundException("Role", "id", id));
         this.roleRepository.deleteById(id);
+        this.roleRepository.flush();
+        this.permissionAuthorizationManager.loadCache();
     }
 
     @Override 

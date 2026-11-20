@@ -1,8 +1,11 @@
 package com.example.hrmanagement.feature.user;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.annotations.AnyDiscriminatorImplicitValues.Strategy;
 
 import com.example.hrmanagement.feature.company.Company;
@@ -59,12 +62,18 @@ public class User {
     
     private Integer age;
     
-    @Enumerated (EnumType.STRING)
-    private GenderEnum gender;
+    @CreationTimestamp 
+    private Instant createdAt;
 
-    @ManyToOne (fetch = FetchType.LAZY)
-    @JoinColumn (name = "company_id")
-    private Company company;
+    @UpdateTimestamp 
+    private Instant updateAt;
+
+    @Enumerated(EnumType.STRING)
+private GenderEnum gender;
+
+@ManyToOne(fetch = FetchType.LAZY)
+@JoinColumn(name = "company_id")
+private Company company;
 
     @ManyToMany 
     @JoinTable (

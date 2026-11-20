@@ -12,6 +12,7 @@ import com.example.hrmanagement.exception.ResourceNotFoundException;
 import com.example.hrmanagement.feature.permission.dto.PermissionFilterDTO;
 import com.example.hrmanagement.feature.permission.dto.PermissionRequestDTO;
 import com.example.hrmanagement.feature.permission.dto.PermissionResponseDTO;
+import com.example.hrmanagement.security.PermissionAuthorizationManager;
 
 import lombok.RequiredArgsConstructor;
 
@@ -20,6 +21,7 @@ import lombok.RequiredArgsConstructor;
 public class PermissionServiceImpl implements PermissionService {
 
     private final PermissionRepository permissionRepository;
+    private final PermissionAuthorizationManager permissionAuthorizationManager;
 
     @Override 
     @Transactional 
@@ -37,7 +39,8 @@ public class PermissionServiceImpl implements PermissionService {
         p.setMethod(method);
         p.setApiPath(apiPath);
         p.setModule(module);
-        this.permissionRepository.save(p);
+        this.permissionRepository.saveAndFlush(p);
+        this.permissionAuthorizationManager.loadCache();
         return PermissionResponseDTO.fromEntity(p);
     }
 
@@ -61,6 +64,7 @@ public class PermissionServiceImpl implements PermissionService {
     permissionInDB.setModule(module);
     permissionInDB.setName(name);
     this.permissionRepository.saveAndFlush(permissionInDB);
+    this.permissionAuthorizationManager.loadCache();
     return PermissionResponseDTO.fromEntity(permissionInDB);
     }
 
@@ -92,6 +96,8 @@ public class PermissionServiceImpl implements PermissionService {
         this.permissionRepository.findById(id)
         .orElseThrow(() -> new ResourceNotFoundException("Permission", "id", id));
         this.permissionRepository.deleteById(id);
+        this.permissionRepository.flush();
+        this.permissionAuthorizationManager.loadCache();
     }
 
 }

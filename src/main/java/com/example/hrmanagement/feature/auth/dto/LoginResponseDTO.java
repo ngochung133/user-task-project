@@ -1,18 +1,16 @@
 package com.example.hrmanagement.feature.auth.dto;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@Setter 
-@Getter 
-@NoArgsConstructor 
-@AllArgsConstructor 
-public class LoginResponseDTO {
+@Builder 
+public record LoginResponseDTO(
+    String accessToken,
+    String refreshToken
+) {
+} 
 
-    private String accessToken;
-    private String tokenType;
-    private long tokenExpiration;
 
-}
