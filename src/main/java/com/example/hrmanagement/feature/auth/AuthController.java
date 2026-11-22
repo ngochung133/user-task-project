@@ -22,13 +22,12 @@ import java.util.Arrays;
 
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.apache.catalina.connector.Response;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-
-import org.slf4j.Logger;
 
 
 @RestController 
@@ -37,11 +36,13 @@ import org.slf4j.Logger;
 public class AuthController {
     private static final String REFRESH_TOKEN_COOKIE_NAME = "refresh_token";
     private static final String COOKIE_PATH = "/api/v1/auth";
-    private static final int COOKIE_MAX_AGE = 259200;
 
     private static final Logger log =
         LoggerFactory.getLogger(AuthController.class);
     private final AuthService authService;
+
+    @Value("${jwt.refresh-expiration}")
+    private long refreshTokenExpirationMs;
 
 
     @GetMapping("/")
@@ -83,30 +84,31 @@ public class AuthController {
         LoginResponseDTO response = this.authService.refresh(rawRefreshToken);
         setRefreshTokenCookie(response.refreshToken(), httpServletResponse);
         
-        log.info("new RefreshToken {}", response.refreshToken());
+        log.info("Refresh token rotated successfully");
         return ApiResponse.success("Refresh token refreshed successfully", response);
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<?> logout(@RequestBody RefreshTokenRequestDTO dto,
+    public ResponseEntity<?> logout(@RequestBody(required = false) RefreshTokenRequestDTO dto,
                                     HttpServletRequest httpRequest,
                                     HttpServletResponse httpResponse
     ) {
         
         String rawRefreshToken = extractRefreshToken(httpRequest, dto);
         if(rawRefreshToken == null){
-            throw new InvalidTokenException("Token is not valid");
+            throw new InvalidTokenException("Thiếu refresh token");
         }
+        this.authService.logout(rawRefreshToken);
         clearRefreshTokenCookie(httpResponse);
         
         log.info("Log out successfully");
-        return ApiResponse.success("Log out succesfully");
+        return ApiResponse.success("Log out successfully");
     }
     
     
     public String extractRefreshToken(HttpServletRequest httpRequest, RefreshTokenRequestDTO dto){
         String refreshTokenFromCookie = extractRefreshTokenFromCookie(httpRequest);
-        if(refreshTokenFromCookie != null){
+        if(refreshTokenFromCookie != null && !refreshTokenFromCookie.isBlank()){
             return refreshTokenFromCookie;
         }
         if(dto != null && dto.refreshToken() != null && !dto.refreshToken().isBlank()){
@@ -136,13 +138,14 @@ public class AuthController {
 
     //Set RefreshToken vao cookie
     private void setRefreshTokenCookie(String refreshToken , HttpServletResponse httpResponse){
-        httpResponse.setHeader("SET-COOKIE", REFRESH_TOKEN_COOKIE_NAME + "=" + refreshToken + 
-        "; HttpOnly; Secure; SameSite=Lax; Path=" + COOKIE_PATH + "; Max-Age=" + COOKIE_MAX_AGE);
+        long cookieMaxAgeSeconds = refreshTokenExpirationMs / 1000;
+        httpResponse.setHeader("Set-Cookie", REFRESH_TOKEN_COOKIE_NAME + "=" + refreshToken + 
+        "; HttpOnly; Secure; SameSite=Lax; Path=" + COOKIE_PATH + "; Max-Age=" + cookieMaxAgeSeconds);
     }
 
     //clear refreshToken trong cookie => max age = 0 + các Path để xoá cookie
     private void clearRefreshTokenCookie(HttpServletResponse httpResponse){
-        httpResponse.setHeader("SET_COOKIE", REFRESH_TOKEN_COOKIE_NAME + "=; Max-Age=0; Path=" + COOKIE_PATH);
+        httpResponse.setHeader("Set-Cookie", REFRESH_TOKEN_COOKIE_NAME + "=; HttpOnly; Secure; SameSite=Lax; Path=" + COOKIE_PATH + "; Max-Age=0");
     }
 
     private String extractClientIp(HttpServletRequest httpRequest){

@@ -5,6 +5,9 @@ import java.util.Locale;
 import org.springframework.data.jpa.domain.Specification;
 
 public class CompanySpecification {
+    private CompanySpecification() {
+    }
+
     public static Specification<Company> equalIfPresent(String field, String value){
         if(value == null || value.isBlank()){
             return Specification.unrestricted();
@@ -25,19 +28,19 @@ public class CompanySpecification {
         cb.like(cb.lower(root.get(field)), "%" + nomalized + "%");
     }
 
-    public Specification<Company> hasName(String name){
+    public static Specification<Company> hasName(String name){
         return containsIgnoreCase("name", name);
     }
 
-    public Specification<Company> hasDescription(String description){
+    public static Specification<Company> hasDescription(String description){
         return containsIgnoreCase("description", description);
     }
 
-    public Specification<Company> hasLogo(String logo){
+    public static Specification<Company> hasLogo(String logo){
         return equalIfPresent("logo", logo);
     }
 
-    public Specification<Company> hasAddress(String address){
+    public static Specification<Company> hasAddress(String address){
         return equalIfPresent("address", address);
     }
 }

@@ -6,4 +6,5 @@ spring:
 
 jwt:
   secret: "0123456789abcdef0123456789abcdef"
-  expiration: 3600000
+  access-token-expiration: 900000
+  refresh-expiration: 604800000

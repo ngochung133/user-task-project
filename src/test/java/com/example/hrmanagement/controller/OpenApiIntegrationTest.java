@@ -31,8 +31,8 @@ class OpenApiIntegrationTest {
             .andExpect(jsonPath("$.components.securitySchemes['Bearer Authentication'].type").value("http"))
             .andExpect(jsonPath("$.components.securitySchemes['Bearer Authentication'].scheme").value("bearer"))
             .andExpect(jsonPath("$.security[0]['Bearer Authentication']").isArray())
-            .andExpect(jsonPath("$.paths['/auth/login'].post.security").isEmpty())
-            .andExpect(jsonPath("$.paths['/users'].post.security").isEmpty())
+            .andExpect(jsonPath("$.paths['/api/v1/auth/login'].post.security").isEmpty())
+            .andExpect(jsonPath("$.paths['/api/v1/users'].post.security").isEmpty())
             .andExpect(jsonPath("$.paths['/api/v1/companies'].get").exists());
     }
 

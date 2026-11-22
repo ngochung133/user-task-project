@@ -7,6 +7,7 @@ import lombok.Builder;
 
 @Builder
 public record UserResponseDTO(
+    Long id,
     String name,
     String email,
     Integer age,
@@ -28,7 +29,9 @@ public record UserResponseDTO(
         : user.getRoles().stream()
         .map(role -> new RoleInfo(role.getId(), role.getName()))
         .collect(Collectors.toSet());
-        return new UserResponseDTO(user.getName(),
+        return new UserResponseDTO(
+        user.getId(),
+        user.getName(),
         user.getEmail(),
         user.getAge(),
         user.getAddress(),

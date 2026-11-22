@@ -38,11 +38,22 @@ public class UserServiceImpl implements UserService {
         Specification<User> spec = Specification.allOf(
             UserSpecification.hasAge(filter.age()),
             UserSpecification.hasEmail(filter.email()),
-            UserSpecification.hasName(filter.name())
+            UserSpecification.hasName(filter.name()),
+            UserSpecification.ageFrom(filter.minAge()),
+            UserSpecification.ageTo(filter.maxAge()),
+            UserSpecification.hasGender(filter.gender())
         );
         Page<UserResponseDTO> userList = this.userRepository.findAll(spec,pageable)
         .map(UserResponseDTO::fromEntity);
         return userList;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public UserResponseDTO getUserById(Long id) {
+        User user = this.userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", id));
+        return UserResponseDTO.fromEntity(user);
     }
 
     @Override
@@ -71,7 +82,9 @@ public class UserServiceImpl implements UserService {
         user.setGender(request.getGender());
         user.setAge(request.getAge());
         user.setAddress(request.getAddress());
+        user.setAvatar(request.getAvatar());
         user.setEmail(request.getEmail());
+        user.setAvatar(request.getAvatar());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRoles(new HashSet<>(roles));
         this.userRepository.saveAndFlush(user);
@@ -98,12 +111,14 @@ public class UserServiceImpl implements UserService {
             throw new ResourceNotFoundException("Role", "id", missingRoleIds);
         }
         userInDB.setAddress(request.getAddress());
+        userInDB.setAvatar(request.getAvatar());
         userInDB.setName(request.getName());
         userInDB.setAge(request.getAge());
         userInDB.setGender(request.getGender());
         userInDB.setPassword(passwordEncoder.encode(request.getPassword()));
         userInDB.setRoles(new HashSet<>(roles));
         userInDB.setEmail(request.getEmail());
+        userInDB.setAvatar(request.getAvatar());
         this.userRepository.saveAndFlush(userInDB);
         return UserResponseDTO.fromEntity(userInDB);
     }

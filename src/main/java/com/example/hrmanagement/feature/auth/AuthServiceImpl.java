@@ -5,8 +5,10 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
+import java.util.HashSet;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,6 +33,8 @@ import com.example.hrmanagement.feature.auth.dto.LoginRequestDTO;
 import com.example.hrmanagement.feature.auth.dto.LoginResponseDTO;
 import com.example.hrmanagement.feature.auth.dto.RegisterRequest;
 import com.example.hrmanagement.feature.auth.dto.RegisterResponse;
+import com.example.hrmanagement.feature.role.Role;
+import com.example.hrmanagement.feature.role.RoleRepository;
 import com.example.hrmanagement.feature.user.User;
 import com.example.hrmanagement.feature.user.UserRepository;
 
@@ -41,7 +45,9 @@ import lombok.RequiredArgsConstructor;
 public class AuthServiceImpl implements AuthService {
 
     private static final Logger log = LoggerFactory.getLogger(AuthServiceImpl.class);
+    private static final String DEFAULT_REGISTER_ROLE = "USER";
     private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtEncoder jwtEncoder;
@@ -59,6 +65,8 @@ public class AuthServiceImpl implements AuthService {
         if(userRepository.existsByEmail(request.email())){
             throw new ResourceAlreadyExistException("User", "email", request.email());
         }
+        Role defaultRole = this.roleRepository.findByName(DEFAULT_REGISTER_ROLE)
+                .orElseThrow(() -> new ResourceNotFoundException("Role", "name", DEFAULT_REGISTER_ROLE));
         User user = new User();
         user.setName(request.name());
         user.setEmail(request.email());
@@ -66,6 +74,7 @@ public class AuthServiceImpl implements AuthService {
         user.setGender(request.gender());
         user.setAddress(request.address());
         user.setAge(request.age());
+        user.setRoles(new HashSet<>(Set.of(defaultRole)));
         this.userRepository.saveAndFlush(user);
         log.info("Register user {}",user.getEmail());
         return RegisterResponse.fromEntity(user);
@@ -91,7 +100,7 @@ public class AuthServiceImpl implements AuthService {
 
         saveRefreshToken(user, deviceInfo,ipAddress,refreshToken);
 
-        log.info("Log in successfully with accessToken {} and refreshToken {}", accessToken,refreshToken);
+        log.info("User {} logged in successfully", user.getEmail());
 
         return LoginResponseDTO.builder().accessToken(accessToken).refreshToken(refreshToken).build();
     }
@@ -131,13 +140,13 @@ public class AuthServiceImpl implements AuthService {
         String hashToken = hashToken(rawRefreshToken);
 
         RefreshToken refreshTokenInDB = this.refreshTokenRepository.findByToken(hashToken)
-        .orElseThrow(() -> new InvalidTokenException("Refresh Token is exist"));
+        .orElseThrow(() -> new InvalidTokenException("Refresh token không tồn tại"));
 
         if(refreshTokenInDB.isRevoked()){
             throw new InvalidTokenException("Refresh Token is revoked");
         }
         if(refreshTokenInDB.getExpiresAt().isBefore(Instant.now())){
-            throw new InvalidTokenException("Refresh token is exprirated");
+            throw new InvalidTokenException("Refresh token is expired");
         }
         refreshTokenInDB.setRevoked(true);
         this.refreshTokenRepository.save(refreshTokenInDB);
@@ -173,12 +182,21 @@ public class AuthServiceImpl implements AuthService {
     }
 
     //Save Refresh Token in DB , howerer, hash Refresh Token before save 
-    private void saveRefreshToken(User user, String diviceInfo, String ipAdress, String refreshToken){
+    private void saveRefreshToken(User user, String deviceInfo, String ipAddress, String refreshToken){
+        String safeDeviceInfo = (deviceInfo == null || deviceInfo.isBlank()) ? "Unknown" : deviceInfo.trim();
+        if (safeDeviceInfo.length() > 255) {
+            safeDeviceInfo = safeDeviceInfo.substring(0, 255);
+        }
+        String safeIpAddress = (ipAddress == null || ipAddress.isBlank()) ? "Unknown" : ipAddress.trim();
+        if (safeIpAddress.length() > 255) {
+            safeIpAddress = safeIpAddress.substring(0, 255);
+        }
+
         RefreshToken refresh = new RefreshToken();
         refresh.setUser(user);
         refresh.setExpiresAt(Instant.now().plusMillis(refreshTokenExpiration));
-        refresh.setDeviceInfo(diviceInfo);
-        refresh.setIpAddress(ipAdress);
+        refresh.setDeviceInfo(safeDeviceInfo);
+        refresh.setIpAddress(safeIpAddress);
         refresh.setRevoked(false);
         refresh.setToken(hashToken(refreshToken));
         this.refreshTokenRepository.save(refresh);

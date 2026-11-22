@@ -2,13 +2,17 @@ package com.example.hrmanagement.exception;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
 import com.example.hrmanagement.dto.ApiResponse;
 
@@ -45,6 +49,12 @@ public class GlobalExceptionHandler {
             return ApiResponse.conflict(ex.getMessage());
         }
 
+     @ExceptionHandler(DataIntegrityViolationException.class)
+     public ResponseEntity<ApiResponse<Void>> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+        log.warn("DataIntegrityViolationException: {}", ex.getMostSpecificCause().getMessage());
+        return ApiResponse.conflict("Dữ liệu bị trùng lặp hoặc đang được tham chiếu, không thể thực hiện thao tác");
+     }
+
      @ExceptionHandler(BadCredentialsException.class)
      public ResponseEntity<?> handleBadCredentials(BadCredentialsException ex) {
         log.warn("Đăng nhập thất bại: email hoặc mật khẩu không chính xác");
@@ -66,5 +76,21 @@ public class GlobalExceptionHandler {
    @ExceptionHandler(FileUploadException.class)
    public ResponseEntity<?> handleFileUpload(FileUploadException ex){
       return ApiResponse.badRequest(ex.getMessage());
+   }
+
+   @ExceptionHandler(MaxUploadSizeExceededException.class)
+   public ResponseEntity<ApiResponse<Void>> handleMaxUploadSize(MaxUploadSizeExceededException ex) {
+      log.warn("MaxUploadSizeExceededException: {}", ex.getMessage());
+      return ResponseEntity.status(HttpStatus.CONTENT_TOO_LARGE)
+              .body(ApiResponse.ofError(
+                      HttpStatus.CONTENT_TOO_LARGE.value(),
+                      "Dung lượng file hoặc request vượt quá giới hạn cho phép",
+                      HttpStatus.CONTENT_TOO_LARGE.getReasonPhrase()));
+   }
+
+   @ExceptionHandler({MissingServletRequestPartException.class, MissingServletRequestParameterException.class})
+   public ResponseEntity<ApiResponse<Void>> handleMissingRequestPart(Exception ex) {
+      log.warn("Missing request part/parameter: {}", ex.getMessage());
+      return ApiResponse.badRequest("Thiếu tham số hoặc tệp tin bắt buộc trong request");
    }
 }

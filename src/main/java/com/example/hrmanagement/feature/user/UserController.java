@@ -1,5 +1,6 @@
 package com.example.hrmanagement.feature.user;
 
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
@@ -25,16 +26,23 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/users")
+@RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
 public class UserController {
 
     private final UserService userService;
 
     @GetMapping
-    public ResponseEntity<?> getUser(Pageable pageable, @ModelAttribute UserFilterDTO filter) {
+    public ResponseEntity<?> getUser(@ParameterObject Pageable pageable,
+            @ParameterObject @ModelAttribute UserFilterDTO filter) {
         Page<UserResponseDTO> users = this.userService.fetchAllUser(pageable, filter);
         return ApiResponse.success(PageResponseDTO.from(users));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getUserById(@PathVariable Long id) {
+        UserResponseDTO dto = this.userService.getUserById(id);
+        return ApiResponse.success(dto);
     }
     //@SecurityRequirements để trống trên postUser báo cho 
     // OpenAPI/Swagger rằng endpoint này không yêu cầu Bearer token,

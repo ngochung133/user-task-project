@@ -2,6 +2,7 @@ package com.example.hrmanagement.config;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
@@ -9,10 +10,8 @@ import javax.crypto.spec.SecretKeySpec;
 import jakarta.servlet.http.HttpServletResponse;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.security.autoconfigure.web.servlet.SecurityFilterProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -41,6 +40,9 @@ import org.springframework.security.oauth2.server.resource.web.access.BearerToke
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import com.example.hrmanagement.dto.ApiResponse;
 import com.example.hrmanagement.security.PermissionAuthorizationManager;
@@ -86,29 +88,50 @@ public class SecurityConfig {
         ));
         return decoder;
     }
+    
+    @Bean 
+    CorsConfigurationSource corsConfigurationSource(CorsProperties corsProperties){
+        CorsConfiguration corsConfiguration = new CorsConfiguration();
+
+        corsConfiguration.setAllowedOrigins(corsProperties.getAllowedOrigins());
+
+        corsConfiguration.setAllowedMethods(
+                Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        corsConfiguration.setAllowedHeaders(
+            Arrays.asList("Authorization", "Content-Type", "Cache-Control"));
+
+        corsConfiguration.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", corsConfiguration);
+        return source;
+    }
 
     @Bean
     SecurityFilterChain defaultSecurityFilterChain(
             HttpSecurity http,
+            CorsConfigurationSource corsConfigurationSource,
             AuthenticationEntryPoint authenticationEntryPoint,
             AccessDeniedHandler accessDeniedHandler,
             PermissionAuthorizationManager permissionAuthorizationManager
     ) throws Exception {
         String[] whitelist = {
-                "/v3/api-docs/**",
-                "/swagger-ui/**",
-                "/swagger-ui.html",
-                "/api/v1/auth/login",
-                "/api/v1/auth/register",
-                "/api/v1/auth/refresh",
-                "/uploads/**"
+            "/v3/api-docs/**",
+            "/swagger-ui/**",
+            "/swagger-ui.html",
+            "/api/v1/auth/login",
+            "/api/v1/auth/register",
+            "/api/v1/auth/refresh",
+            "/api/v1/auth/logout",
+            "/uploads/**"
         };
 
+        http.cors(cors -> cors.configurationSource(corsConfigurationSource));
         http.csrf(csrf -> csrf.disable());
         http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
         http.authorizeHttpRequests(auth -> auth
                 .requestMatchers(whitelist).permitAll()
-                .requestMatchers("/api/v1/auth/logout").authenticated()
+                .requestMatchers("/api/v1/dashboard").authenticated()
                 .anyRequest().access(permissionAuthorizationManager));
             
         //exceptionHandling().authenticationEntryPoint() cấu hình xử lý 401 ở cơ chế xử lý ngoại lệ bảo mật chung.(không gửi token)

@@ -1,18 +1,19 @@
 package com.example.hrmanagement.service;
 
-import com.example.hrmanagement.feature.user.User;
-import com.example.hrmanagement.feature.user.UserRepository;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
-    import java.lang.module.ResolutionException;
-    import java.util.List;
-    import java.util.Optional;
-
-    import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -20,14 +21,25 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import com.example.hrmanagement.feature.user.dto.UserResponseDTO;
-import com.example.hrmanagement.feature.user.UserServiceImpl;
 import com.example.hrmanagement.exception.ResourceAlreadyExistException;
 import com.example.hrmanagement.exception.ResourceNotFoundException;
+import com.example.hrmanagement.feature.company.CompanyRepository;
+import com.example.hrmanagement.feature.role.Role;
+import com.example.hrmanagement.feature.role.RoleRepository;
+import com.example.hrmanagement.feature.user.User;
+import com.example.hrmanagement.feature.user.UserRepository;
+import com.example.hrmanagement.feature.user.UserServiceImpl;
+import com.example.hrmanagement.feature.user.dto.UserFilterDTO;
+import com.example.hrmanagement.feature.user.dto.UserRequestDTO;
+import com.example.hrmanagement.feature.user.dto.UserResponseDTO;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
@@ -35,215 +47,230 @@ class UserServiceTest {
     @Mock
     private UserRepository userRepository;
 
-    @Mock 
+    @Mock
     private PasswordEncoder passwordEncoder;
 
-    @InjectMocks 
+    @Mock
+    private CompanyRepository companyRepository;
+
+    @Mock
+    private RoleRepository roleRepository;
+
+    @InjectMocks
     private UserServiceImpl userService;
 
     private User mockUser;
+    private UserRequestDTO validRequest;
+    private Role userRole;
 
-    @BeforeEach 
-    void setUp(){
+    @BeforeEach
+    void setUp() {
+        userRole = new Role();
+        userRole.setId(10L);
+        userRole.setName("USER");
+
         mockUser = new User();
         mockUser.setId(1L);
         mockUser.setEmail("test@gmail.com");
         mockUser.setName("Test");
-        mockUser.setPassword("123456");
+        mockUser.setPassword("encoded_password");
+        mockUser.setAddress("Ha Noi");
+        mockUser.setAvatar("avatar.png");
+        mockUser.setRoles(Set.of(userRole));
+
+        validRequest = new UserRequestDTO(
+                "Test",
+                "test@gmail.com",
+                "123456",
+                25,
+                "avatar.png",
+                User.GenderEnum.MALE,
+                null,
+                Set.of(10L),
+                "Ha Noi");
     }
 
-    @Test 
-    @DisplayName("Lấy danh sách user")
-    
-    void testfetchAllUser(){
-        when(userRepository.findAll()).thenReturn(List.of(mockUser));
-        List<UserResponseDTO> result = userService.fetchAllUser();
-        assertEquals(1L, result.get(0).getId());
-        assertEquals("Test", result.get(0).getName());
-        verify(userRepository).findAll();
+    @Test
+    @DisplayName("Lấy danh sách user có phân trang và bộ lọc")
+    @SuppressWarnings("unchecked")
+    void testFetchAllUser() {
+        Pageable pageable = PageRequest.of(0, 10);
+        UserFilterDTO filter = new UserFilterDTO(null, "Test", null, null, null, null);
+        when(userRepository.findAll(any(Specification.class), eq(pageable)))
+                .thenReturn(new PageImpl<>(List.of(mockUser), pageable, 1));
+
+        Page<UserResponseDTO> result = userService.fetchAllUser(pageable, filter);
+
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().get(0).id()).isEqualTo(1L);
+        assertThat(result.getContent().get(0).name()).isEqualTo("Test");
+        assertThat(result.getContent().get(0).avatar()).isEqualTo("avatar.png");
+        verify(userRepository).findAll(any(Specification.class), eq(pageable));
     }
 
-    @Nested 
-    @DisplayName ("Khi tạo User thành công")
-    
-    class WhenCreateUserSucceeds{
+    @Test
+    @DisplayName("Lấy user theo ID thành công và báo 404 khi không tồn tại")
+    void testGetUserById() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(mockUser));
+        when(userRepository.findById(99L)).thenReturn(Optional.empty());
 
-        @Test 
-        @DisplayName ("Tạo User thành công và trả về User đã được lưu")
-        
-        void createUser_shouldReturnUser(){
-            String hashPassword = "encoded_passwood";
+        UserResponseDTO found = userService.getUserById(1L);
+        assertThat(found.id()).isEqualTo(1L);
+        assertThat(found.email()).isEqualTo("test@gmail.com");
 
-            User userSaved = new User();
-            userSaved.setId(1L);
-            userSaved.setEmail("test@gmail.com");
-            userSaved.setPassword(hashPassword);
-            when(userRepository.save(any(User.class))).thenReturn(userSaved);
-            when(passwordEncoder.encode(mockUser.getPassword())).thenReturn(hashPassword);
-            when(userRepository.existsByEmail(mockUser.getEmail())).thenReturn(false);
-            UserResponseDTO result = userService.createUser(mockUser);
-            
-            //Check user before save in database, having id is null
-            ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass((User.class));
-            verify(userRepository).save(userCaptor.capture());
-            User userToSave = userCaptor.getValue();
-            assertThat(userToSave.getId()).isEqualTo(null);
-            assertThat(result).isNotNull();
-            assertThat(result.getId()).isEqualTo(userSaved.getId());
-            assertThat(result.getEmail()).isEqualTo(userSaved.getEmail());
-            verify(userRepository).existsByEmail(mockUser.getEmail());
-            verify(passwordEncoder).encode("123456");
-            verify(userRepository).save(mockUser);
-        }   
-
-        @Test 
-        @DisplayName ("Kiểm tra mật khẩu được mã hoá trước khi save xuống database")
-        void createUser_shouldEncodePasswordBeforeSave(){
-        User userSaved = new User();
-            String hashPassword = "encoded_passwood";
-            userSaved.setId(1L);
-            userSaved.setEmail("test@gmail.com");
-            userSaved.setPassword(hashPassword);
-            when(userRepository.existsByEmail(mockUser.getEmail())).thenReturn(false);
-            when(passwordEncoder.encode(mockUser.getPassword())).thenReturn(hashPassword);
-            when(userRepository.save(any(User.class))).thenReturn(userSaved);
-            userService.createUser(mockUser);
-
-            //lấy user trong creater(user) ra kiểm tra
-            ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
-            verify(userRepository).save(userCaptor.capture());
-            User userParameter = userCaptor.getValue();
-            assertThat(userParameter.getPassword()).isEqualTo(hashPassword);
-            
-        }
+        assertThatThrownBy(() -> userService.getUserById(99L))
+                .isInstanceOf(ResourceNotFoundException.class);
     }
 
-    @Nested 
-    @DisplayName ("Khi tạo user thất bại")
-    class WhenCreateUserFail{
-        
-        @Test
-        @DisplayName ("Email đã tồn tại: ném ResourceAlreadyExistException với message chứa email")
-
-        void createrUser_whenEmailExists(){
-
-
-            when(userRepository.existsByEmail(mockUser.getEmail())).thenReturn(true);
-
-            assertThatThrownBy(() -> userService.createUser(mockUser))
-                    .isInstanceOf(ResourceAlreadyExistException.class)
-                    // chứa chuỗi con
-                    .hasMessageContaining("test@gmail.com");
-        }
-        
-        @Test
-        @DisplayName ("Email tồn tại thì không lưu vào database")
-        void createrUser_whenEmailExists_shouldNotSave(){
-            
-            when(userRepository.existsByEmail(mockUser.getEmail())).thenReturn(true);
-            assertThatThrownBy(() -> userService.createUser(mockUser))
-            .isInstanceOf(ResourceAlreadyExistException.class)
-            .hasMessageContaining("test@gmail.com");
-            verify(userRepository,never()).save(any(User.class));
-        }
-    }
-
-    @Nested 
-    @DisplayName("Xoá User")
-    
-    class deleteUser{
+    @Nested
+    @DisplayName("Khi tạo User thành công")
+    class WhenCreateUserSucceeds {
 
         @Test
-        @DisplayName ("Xoá User thành công")
-        void delteUser_whenExistUser(){
-            when(userRepository.findById(mockUser.getId())).thenReturn(Optional.of(mockUser));
+        @DisplayName("Tạo User thành công, mã hóa mật khẩu và lưu avatar")
+        void createUser_shouldEncodePasswordAndSaveAvatar() {
+            String hashPassword = "encoded_password";
+            when(userRepository.existsByEmail(validRequest.getEmail())).thenReturn(false);
+            when(roleRepository.findAllById(validRequest.getRoleIDs())).thenReturn(List.of(userRole));
+            when(passwordEncoder.encode("123456")).thenReturn(hashPassword);
+            when(userRepository.saveAndFlush(any(User.class))).thenAnswer(inv -> {
+                User u = inv.getArgument(0);
+                u.setId(1L);
+                return u;
+            });
 
-            userService.deleteUserByID(1L);
-            verify(userRepository).findById(1L);
-        }
-
-        @Test 
-        @DisplayName("Xoá User không thành công")
-        void deleteUser_whenNotExistUser() {
-    when(userRepository.findById(1L)).thenReturn(Optional.empty());
-
-    assertThatThrownBy(() -> userService.deleteUserByID(1L))
-            .isInstanceOf(ResourceNotFoundException.class)
-            .hasMessageContaining("1");
-
-    verify(userRepository, never()).deleteById(anyLong());
-        }
-    }
-
-    @Nested 
-    @DisplayName ("Update User")
-
-    class UpdateUserSucced{
-
-        @Test
-        @DisplayName ("Update User thành công")
-        void updateUser_shouldReturnNewUpdate(){
-            User updatUser = new User();
-            updatUser.setEmail("new@gmail.com");
-            updatUser.setName("New");
-            updatUser.setPassword("newPassword");
-            updatUser.setAddress("newAddress");
-            String hashPassword = "encoded_Password";
-
-            when(userRepository.findById(1L)).thenReturn(Optional.of(mockUser));
-            when(userRepository.existsByEmail(updatUser.getEmail())).thenReturn(false);
-            when(passwordEncoder.encode(updatUser.getPassword())).thenReturn(hashPassword);
-            when(userRepository.save(any(User.class))).thenReturn(mockUser);
-
-            UserResponseDTO result = userService.updateUser(1L, updatUser);
+            UserResponseDTO result = userService.createUser(validRequest);
 
             ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
-            verify(userRepository).save(userCaptor.capture());
-            User userToSave = userCaptor.getValue();
-            assertThat(userToSave.getPassword()).isEqualTo(hashPassword);
-            assertThat(result.getEmail()).isEqualTo(mockUser.getEmail());
-            assertThat(result.getEmail()).isEqualTo(updatUser.getEmail());
-            assertThat(result.getName()).isEqualTo(updatUser.getName());
+            verify(userRepository).saveAndFlush(userCaptor.capture());
+            User savedUser = userCaptor.getValue();
+
+            assertThat(savedUser.getPassword()).isEqualTo(hashPassword);
+            assertThat(savedUser.getAvatar()).isEqualTo("avatar.png");
+            assertThat(result.id()).isEqualTo(1L);
+            assertThat(result.email()).isEqualTo("test@gmail.com");
+            assertThat(result.avatar()).isEqualTo("avatar.png");
         }
     }
 
     @Nested
-    @DisplayName ("Update User thất bại")
-    
-    class updateUserFail{
+    @DisplayName("Khi tạo User thất bại")
+    class WhenCreateUserFail {
 
-        @Test 
-        @DisplayName ("Không tìm thấy User")
+        @Test
+        @DisplayName("Email đã tồn tại: ném ResourceAlreadyExistException và không lưu DB")
+        void createUser_whenEmailExists_shouldNotSave() {
+            when(userRepository.existsByEmail(validRequest.getEmail())).thenReturn(true);
 
-        void updateUser_UserNotExist(){
+            assertThatThrownBy(() -> userService.createUser(validRequest))
+                    .isInstanceOf(ResourceAlreadyExistException.class)
+                    .hasMessageContaining("test@gmail.com");
 
-            User updateUser = new User();
-
-            when(userRepository.findById(1L)).thenReturn(Optional.empty());
-
-            assertThatThrownBy(() -> userService.updateUser(1L,updateUser))
-            .isInstanceOf(ResourceNotFoundException.class)
-            .hasMessageContaining("1");
-
-            verify(userRepository,never()).save(any(User.class));
+            verify(userRepository, never()).saveAndFlush(any(User.class));
         }
 
         @Test
-        @DisplayName ("Email cập nhật bị trùng")
+        @DisplayName("Role ID không tồn tại: ném ResourceNotFoundException và không lưu DB")
+        void createUser_whenRoleMissing_shouldThrowNotFound() {
+            when(userRepository.existsByEmail(validRequest.getEmail())).thenReturn(false);
+            when(roleRepository.findAllById(validRequest.getRoleIDs())).thenReturn(List.of());
 
-        void updateUser_whenEmailDuplicate(){
+            assertThatThrownBy(() -> userService.createUser(validRequest))
+                    .isInstanceOf(ResourceNotFoundException.class);
 
-            User updateUser = new User();
-            updateUser.setEmail("duplicate@gmail.com");
+            verify(userRepository, never()).saveAndFlush(any(User.class));
+        }
+    }
+
+    @Nested
+    @DisplayName("Xóa User")
+    class DeleteUser {
+
+        @Test
+        @DisplayName("Xóa User thành công")
+        void deleteUser_whenExistUser() {
             when(userRepository.findById(1L)).thenReturn(Optional.of(mockUser));
-            when(userRepository.existsByEmail(updateUser.getEmail())).thenReturn(true);
 
-            assertThatThrownBy(() -> userService.updateUser(1L, updateUser))
-            .isInstanceOf(ResourceAlreadyExistException.class)
-            .hasMessageContaining(updateUser.getEmail());
-            
+            userService.deleteUserByID(1L);
+
             verify(userRepository).findById(1L);
-            verify(userRepository,never()).save(any(User.class));
+            verify(userRepository).deleteById(1L);
+        }
+
+        @Test
+        @DisplayName("Xóa User không tồn tại ném ResourceNotFoundException")
+        void deleteUser_whenNotExistUser() {
+            when(userRepository.findById(1L)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> userService.deleteUserByID(1L))
+                    .isInstanceOf(ResourceNotFoundException.class)
+                    .hasMessageContaining("1");
+
+            verify(userRepository, never()).deleteById(anyLong());
+        }
+    }
+
+    @Nested
+    @DisplayName("Update User")
+    class UpdateUser {
+
+        @Test
+        @DisplayName("Cập nhật User thành công")
+        void updateUser_shouldReturnNewUpdate() {
+            UserRequestDTO updateRequest = new UserRequestDTO(
+                    "New",
+                    "new@gmail.com",
+                    "newPassword",
+                    28,
+                    "new-avatar.png",
+                    User.GenderEnum.FEMALE,
+                    null,
+                    Set.of(10L),
+                    "newAddress");
+            String hashPassword = "encoded_new_password";
+
+            when(userRepository.findById(1L)).thenReturn(Optional.of(mockUser));
+            when(userRepository.existsByEmailAndIdNot("new@gmail.com", 1L)).thenReturn(false);
+            when(roleRepository.findAllById(Set.of(10L))).thenReturn(List.of(userRole));
+            when(passwordEncoder.encode("newPassword")).thenReturn(hashPassword);
+            when(userRepository.saveAndFlush(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            UserResponseDTO result = userService.updateUser(1L, updateRequest);
+
+            ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+            verify(userRepository).saveAndFlush(userCaptor.capture());
+            User savedUser = userCaptor.getValue();
+
+            assertThat(savedUser.getPassword()).isEqualTo(hashPassword);
+            assertThat(savedUser.getAvatar()).isEqualTo("new-avatar.png");
+            assertThat(result.id()).isEqualTo(1L);
+            assertThat(result.email()).isEqualTo("new@gmail.com");
+            assertThat(result.name()).isEqualTo("New");
+        }
+
+        @Test
+        @DisplayName("Không tìm thấy User khi cập nhật")
+        void updateUser_UserNotExist() {
+            when(userRepository.findById(1L)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> userService.updateUser(1L, validRequest))
+                    .isInstanceOf(ResourceNotFoundException.class)
+                    .hasMessageContaining("1");
+
+            verify(userRepository, never()).saveAndFlush(any(User.class));
+        }
+
+        @Test
+        @DisplayName("Email cập nhật bị trùng với user khác")
+        void updateUser_whenEmailDuplicate() {
+            when(userRepository.findById(1L)).thenReturn(Optional.of(mockUser));
+            when(userRepository.existsByEmailAndIdNot(validRequest.getEmail(), 1L)).thenReturn(true);
+
+            assertThatThrownBy(() -> userService.updateUser(1L, validRequest))
+                    .isInstanceOf(ResourceAlreadyExistException.class)
+                    .hasMessageContaining(validRequest.getEmail());
+
+            verify(userRepository, never()).saveAndFlush(any(User.class));
         }
     }
 }

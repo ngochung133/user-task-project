@@ -9,7 +9,10 @@ import com.example.hrmanagement.exception.GlobalExceptionHandler;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -42,5 +45,40 @@ class GlobalExceptionHandlerTest {
             logger.detachAppender(appender);
             appender.stop();
         }
+    }
+
+    @Test
+    @DisplayName("Vi phạm ràng buộc DB trả 409 Conflict và không lộ chi tiết SQL")
+    void dataIntegrityViolationReturnsConflictWithoutSqlDetails() {
+        var response = new GlobalExceptionHandler().handleDataIntegrityViolation(
+                new DataIntegrityViolationException("wrapper",
+                        new RuntimeException("Duplicate entry 'test' for key 'companies.UK_name'")));
+
+        assertThat(response.getStatusCode().value()).isEqualTo(409);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getStatusCode()).isEqualTo(409);
+        assertThat(response.getBody().getMessage()).doesNotContain("UK_name");
+    }
+
+    @Test
+    @DisplayName("File vượt giới hạn multipart trả 413 Content Too Large")
+    void maxUploadSizeReturns413() {
+        var response = new GlobalExceptionHandler().handleMaxUploadSize(
+                new MaxUploadSizeExceededException(8_388_608L));
+
+        assertThat(response.getStatusCode().value()).isEqualTo(413);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getStatusCode()).isEqualTo(413);
+    }
+
+    @Test
+    @DisplayName("Thiếu multipart part trả 400 Bad Request")
+    void missingPartReturns400() {
+        var response = new GlobalExceptionHandler().handleMissingRequestPart(
+                new MissingServletRequestPartException("file"));
+
+        assertThat(response.getStatusCode().value()).isEqualTo(400);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getStatusCode()).isEqualTo(400);
     }
 }

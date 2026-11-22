@@ -67,12 +67,11 @@ public class CompanyServiceImpl implements CompanyService {
     @Override 
     @Transactional (readOnly = true)
     public Page<CompanyResponseDTO> getAll(Pageable pageable, CompanyFilterDTO filter){
-        CompanySpecification specification = new CompanySpecification();
         Specification<Company> spec = Specification.allOf(
-        specification.hasName(filter.name()),
-        specification.hasDescription(filter.description()),
-        specification.hasLogo(filter.logo()),
-        specification.hasAddress(filter.address())
+                CompanySpecification.hasName(filter.name()),
+                CompanySpecification.hasDescription(filter.description()),
+                CompanySpecification.hasLogo(filter.logo()),
+                CompanySpecification.hasAddress(filter.address())
         );
         Page<CompanyResponseDTO> response = this.companyRepository.findAll(spec, pageable).map(CompanyResponseDTO::fromEntity);
         return response;

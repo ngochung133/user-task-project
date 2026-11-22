@@ -35,6 +35,8 @@ public class UserRequestDTO {
     @Max(value = 150, message =" age have to lower or equal 150")
     private Integer age;
 
+    private String avatar;
+
     private User.GenderEnum gender;
 
     private Long companyId;

@@ -1,10 +1,8 @@
 package com.example.hrmanagement.config;
 
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.zip.DataFormatException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,6 +22,7 @@ import com.example.hrmanagement.feature.role.RoleRepository;
 import com.example.hrmanagement.feature.user.User;
 import com.example.hrmanagement.feature.user.User.GenderEnum;
 import com.example.hrmanagement.feature.user.UserRepository;
+import com.example.hrmanagement.security.PermissionAuthorizationManager;
 
 import lombok.RequiredArgsConstructor;
 
@@ -42,6 +41,7 @@ public class DatabaseSeeder implements CommandLineRunner {
     private final RoleRepository roleRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final PermissionAuthorizationManager permissionAuthorizationManager;
 
     @Override
     @Transactional 
@@ -56,6 +56,7 @@ public class DatabaseSeeder implements CommandLineRunner {
         List<Company> companies = seedCompanies();
         List<Role> roles = seedRoles(permissions);
         seedUsers(roles,companies);
+        this.permissionAuthorizationManager.loadCache();
         log.info("Seeding successfully");
     }
 
@@ -63,28 +64,28 @@ public class DatabaseSeeder implements CommandLineRunner {
         List<Permission> permissions = List.of(
                 // USER module
         createPermission("CREATE_USER", "/api/v1/users", "POST", "USER"),
-        createPermission("UPDATE_USER", "/api/v1/users", "PUT", "USER"),
+        createPermission("UPDATE_USER", "/api/v1/users/{id}", "PUT", "USER"),
         createPermission("DELETE_USER", "/api/v1/users/{id}", "DELETE", "USER"),
         createPermission("VIEW_USERS", "/api/v1/users", "GET", "USER"),
         createPermission("VIEW_USER", "/api/v1/users/{id}", "GET", "USER"),
 
         // COMPANY module
         createPermission("CREATE_COMPANY", "/api/v1/companies", "POST", "COMPANY"),
-        createPermission("UPDATE_COMPANY", "/api/v1/companies", "PUT", "COMPANY"),
+        createPermission("UPDATE_COMPANY", "/api/v1/companies/{id}", "PUT", "COMPANY"),
         createPermission("DELETE_COMPANY", "/api/v1/companies/{id}", "DELETE", "COMPANY"),
         createPermission("VIEW_COMPANIES", "/api/v1/companies", "GET", "COMPANY"),
         createPermission("VIEW_COMPANY", "/api/v1/companies/{id}", "GET", "COMPANY"),
 
         // ROLE module
         createPermission("CREATE_ROLE", "/api/v1/roles", "POST", "ROLE"),
-        createPermission("UPDATE_ROLE", "/api/v1/roles", "PUT", "ROLE"),
+        createPermission("UPDATE_ROLE", "/api/v1/roles/{id}", "PUT", "ROLE"),
         createPermission("DELETE_ROLE", "/api/v1/roles/{id}", "DELETE", "ROLE"),
         createPermission("VIEW_ROLES", "/api/v1/roles", "GET", "ROLE"),
         createPermission("VIEW_ROLE", "/api/v1/roles/{id}", "GET", "ROLE"),
 
         // PERMISSION module
         createPermission("CREATE_PERMISSION", "/api/v1/permissions", "POST", "PERMISSION"),
-        createPermission("UPDATE_PERMISSION", "/api/v1/permissions", "PUT", "PERMISSION"),
+        createPermission("UPDATE_PERMISSION", "/api/v1/permissions/{id}", "PUT", "PERMISSION"),
         createPermission("DELETE_PERMISSION", "/api/v1/permissions/{id}", "DELETE", "PERMISSION"),
         createPermission("VIEW_PERMISSIONS", "/api/v1/permissions", "GET", "PERMISSION"),
         createPermission("VIEW_PERMISSION", "/api/v1/permissions/{id}", "GET", "PERMISSION"),
@@ -106,18 +107,19 @@ public class DatabaseSeeder implements CommandLineRunner {
 
     private List<Company> seedCompanies(){
         List<Company> companies = List.of(
-            createCompany("NNH_Entertainment", "Training talent into profession", "New York"),
-            createCompany("NNH_Club", "Football Club with Messi", "London"),
-            createCompany("NNH_Diamond", "Manufacture and sell diamond", "HANOI CITY"));
+            createCompany("NNH_Entertainment", "Training talent into profession", "New York", "nnh-entertainment.png"),
+            createCompany("NNH_Club", "Football Club with Messi", "London", "nnh-club.png"),
+            createCompany("NNH_Diamond", "Manufacture and sell diamond", "HANOI CITY", "nnh-diamond.png"));
             List<Company> saved = this.companyRepository.saveAllAndFlush(companies);
-            log.info("Seeding company",saved.size());
+            log.info("Seeded company : {}", saved.size());
             return saved;
     }
-    private Company createCompany(String name, String description, String address){
+    private Company createCompany(String name, String description, String address, String logo){
         Company company = new Company();
         company.setName(name);
-        company.setDescription(description);    
+        company.setDescription(description);
         company.setAddress(address);
+        company.setLogo(logo);
         return company;
     }
     private List<Role> seedRoles(List<Permission> allPermissions){
