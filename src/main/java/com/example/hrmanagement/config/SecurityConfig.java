@@ -131,6 +131,7 @@ public class SecurityConfig {
         http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
         http.authorizeHttpRequests(auth -> auth
                 .requestMatchers(whitelist).permitAll()
+                .requestMatchers("/api/v1/auth/me").authenticated()
                 .requestMatchers("/api/v1/dashboard").authenticated()
                 .anyRequest().access(permissionAuthorizationManager));
             

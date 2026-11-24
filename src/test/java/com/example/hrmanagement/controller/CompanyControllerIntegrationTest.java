@@ -23,6 +23,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.JwtRequestPostProcessor;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.transaction.TestTransaction;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -65,6 +66,10 @@ class CompanyControllerIntegrationTest {
 
     @BeforeEach
     void setUpRbac() {
+        // Case ngoài transaction tự tạo và dọn fixture để kiểm tra lỗi tại commit.
+        if (!TestTransaction.isActive()) {
+            return;
+        }
         List<Permission> perms = permissionRepository.saveAllAndFlush(List.of(
                 buildPerm("CREATE_COMPANY", "/api/v1/companies", "POST"),
                 buildPerm("VIEW_COMPANIES", "/api/v1/companies", "GET"),

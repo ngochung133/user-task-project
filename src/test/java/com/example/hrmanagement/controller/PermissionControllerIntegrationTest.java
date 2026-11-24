@@ -33,6 +33,7 @@ import com.example.hrmanagement.feature.role.Role;
 import com.example.hrmanagement.feature.role.RoleRepository;
 import com.example.hrmanagement.security.PermissionAuthorizationManager;
 
+import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import tools.jackson.databind.ObjectMapper;
 
@@ -53,6 +54,8 @@ class PermissionControllerIntegrationTest {
     private RoleRepository roleRepository;
     @Autowired
     private PermissionAuthorizationManager permissionAuthorizationManager;
+    @Autowired
+    private EntityManager entityManager;
 
     private Permission assignedPerm;
 
@@ -161,6 +164,8 @@ class PermissionControllerIntegrationTest {
                         .with(adminJwt()))
                 .andExpect(status().isConflict());
 
+        // Tách entity fixture khỏi request để lỗi xóa được kiểm tra tại FK MySQL.
+        entityManager.clear();
         mockMvc.perform(delete("/api/v1/permissions/{id}", assignedPerm.getId()).with(adminJwt()))
                 .andExpect(status().isConflict());
     }

@@ -26,6 +26,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -103,6 +105,19 @@ public class AuthController {
         
         log.info("Log out successfully");
         return ApiResponse.success("Log out successfully");
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<?> getCurrentUser(Authentication authentication) {
+        if (authentication == null
+                || authentication instanceof AnonymousAuthenticationToken
+                || authentication.getName() == null
+                || authentication.getName().isBlank()) {
+            return ApiResponse.unauthorized("Access token bị thiếu, không hợp lệ hoặc đã hết hạn");
+        }
+        return ApiResponse.success(
+                "Get current user successfully",
+                this.authService.getCurrentUser(authentication.getName()));
     }
     
     

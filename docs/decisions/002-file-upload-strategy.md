@@ -21,4 +21,4 @@ Trả `400` khi thiếu part hoặc dữ liệu sai, `401` khi thiếu hoặc sa
 - Quyền đọc logo. Đề xuất dùng Bearer JWT cho lượt đầu. Nếu cần hiển thị công khai, chốt phạm vi route đọc trước khi mở.
 - Vòng đời file sau khi thay logo, xóa Company hoặc upload thành công nhưng lưu Company thất bại. Luồng hai bước có thể tạo file chưa được gắn với bản ghi.
 
-[Quy ước upload logo](../PROJECT-RULES.md#upload-logo-công-ty)
+[Quy ước upload file](../PROJECT-RULES.md#upload-file-logo-và-avatar)

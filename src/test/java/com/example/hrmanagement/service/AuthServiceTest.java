@@ -40,10 +40,12 @@ import com.example.hrmanagement.feature.auth.dto.LoginRequestDTO;
 import com.example.hrmanagement.feature.auth.dto.LoginResponseDTO;
 import com.example.hrmanagement.feature.auth.dto.RegisterRequest;
 import com.example.hrmanagement.feature.auth.dto.RegisterResponse;
+import com.example.hrmanagement.feature.company.Company;
 import com.example.hrmanagement.feature.role.Role;
 import com.example.hrmanagement.feature.role.RoleRepository;
 import com.example.hrmanagement.feature.user.User;
 import com.example.hrmanagement.feature.user.UserRepository;
+import com.example.hrmanagement.feature.user.dto.UserResponseDTO;
 
 @ExtendWith(MockitoExtension.class)
 class AuthServiceTest {
@@ -234,6 +236,48 @@ class AuthServiceTest {
             when(refreshTokenRepository.findByToken(any())).thenReturn(Optional.empty());
             assertThatThrownBy(() -> authService.logout("missing-token"))
                     .isInstanceOf(InvalidTokenException.class);
+        }
+    }
+
+    @Nested
+    @DisplayName("Lấy thông tin người dùng hiện tại")
+    class GetCurrentUser {
+
+        @Test
+        @DisplayName("Trả về UserResponseDTO đầy đủ company và roles theo email")
+        void getCurrentUser_shouldReturnMappedUserResponseDto() {
+            Company company = new Company();
+            company.setId(10L);
+            company.setName("NNH_Entertainment");
+
+            user.setAge(25);
+            user.setGender(User.GenderEnum.FEMALE);
+            user.setAvatar("avatar.png");
+            user.setCompany(company);
+
+            when(userRepository.findByEmail("alice@example.com")).thenReturn(Optional.of(user));
+
+            UserResponseDTO res = authService.getCurrentUser("alice@example.com");
+
+            assertThat(res.id()).isEqualTo(5L);
+            assertThat(res.name()).isEqualTo("Alice");
+            assertThat(res.email()).isEqualTo("alice@example.com");
+            assertThat(res.age()).isEqualTo(25);
+            assertThat(res.address()).isEqualTo("Ha Noi");
+            assertThat(res.gender()).isEqualTo(User.GenderEnum.FEMALE);
+            assertThat(res.avatar()).isEqualTo("avatar.png");
+            assertThat(res.companyInfo()).isEqualTo(new UserResponseDTO.CompanyInfo(10L, "NNH_Entertainment"));
+            assertThat(res.roleInfo()).containsExactly(new UserResponseDTO.RoleInfo(1L, "USER"));
+        }
+
+        @Test
+        @DisplayName("Ném ResourceNotFoundException khi email không tồn tại")
+        void getCurrentUser_whenUserNotFound_shouldThrowNotFound() {
+            when(userRepository.findByEmail("missing@example.com")).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> authService.getCurrentUser("missing@example.com"))
+                    .isInstanceOf(ResourceNotFoundException.class)
+                    .hasMessageContaining("missing@example.com");
         }
     }
 }

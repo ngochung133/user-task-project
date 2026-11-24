@@ -1,11 +1,11 @@
 # HR Management API
 
-Mục tiêu phát triển của repo `hr-management` là REST API quản lý nhân sự với User, Company, Role, Permission, Auth và RBAC. Các tài liệu Task Manager cũ là tư liệu học tập. Dùng roadmap HR trong [PROJECT-STATUS.md](docs/PROJECT-STATUS.md) để chọn công việc tiếp theo.
+Mục tiêu phát triển của repo `hr-management` là REST API quản lý nhân sự với Auth, User, Company, Role, Permission, File, Dashboard và RBAC. Các tài liệu Task Manager cũ là tư liệu học tập. Dùng roadmap và trạng thái trong [PROJECT-STATUS.md](docs/PROJECT-STATUS.md) để chọn công việc tiếp theo.
 
 ## Trước khi làm việc
 
 1. Xác nhận Git root và đọc [PROJECT-RULES.md](docs/PROJECT-RULES.md) cùng [PROJECT-STATUS.md](docs/PROJECT-STATUS.md). Mọi đường dẫn trong repo tính từ thư mục chứa file này.
-2. Đọc [ARCHITECTURE.md](docs/ARCHITECTURE.md) khi thêm module hoặc chuyển package. Đọc [API_SPEC.md](docs/API_SPEC.md) khi chạm API, [DATABASE.md](docs/DATABASE.md) khi chạm entity/schema và [ADR liên quan](docs/decisions/) khi chạm quyết định kiến trúc.
+2. Đọc [ARCHITECTURE.md](docs/ARCHITECTURE.md) khi thêm module hoặc chạm cấu trúc/security. Đọc [API_SPEC.md](docs/API_SPEC.md) khi chạm API, [DATABASE.md](docs/DATABASE.md) khi chạm entity/schema và [ADR liên quan](docs/decisions/) khi chạm quyết định kiến trúc.
 3. Đọc `CONTEXT.md` của module nếu có, rồi kiểm tra mã và test ở entry point hiện tại. Báo riêng hợp đồng đang chạy, quy ước cho thay đổi mới và thiết kế còn chờ chốt. Nếu tài liệu mâu thuẫn hoặc thiếu quyết định ảnh hưởng hợp đồng, nêu điểm cần chốt trước khi làm phần phụ thuộc.
 
 Chỉ sửa trong phạm vi được giao. Với yêu cầu chỉ làm tài liệu, chỉ thêm hoặc sửa file tài liệu và hướng dẫn AI thuộc phạm vi yêu cầu. Với yêu cầu lập kế hoạch hoặc chuẩn bị feature, dừng ở hợp đồng, phạm vi và bước kiểm thử dự kiến. Việc chuyển package hoặc triển khai một mục roadmap cần yêu cầu thực hiện tương ứng.

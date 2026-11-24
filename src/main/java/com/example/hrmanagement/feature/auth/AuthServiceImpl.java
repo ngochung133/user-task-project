@@ -37,6 +37,7 @@ import com.example.hrmanagement.feature.role.Role;
 import com.example.hrmanagement.feature.role.RoleRepository;
 import com.example.hrmanagement.feature.user.User;
 import com.example.hrmanagement.feature.user.UserRepository;
+import com.example.hrmanagement.feature.user.dto.UserResponseDTO;
 
 import lombok.RequiredArgsConstructor;
 
@@ -150,6 +151,14 @@ public class AuthServiceImpl implements AuthService {
         }
         refreshTokenInDB.setRevoked(true);
         this.refreshTokenRepository.save(refreshTokenInDB);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public UserResponseDTO getCurrentUser(String email) {
+        User user = this.userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
+        return UserResponseDTO.fromEntity(user);
     }
 
     private String generateAccessToken(String email, List<String> roles, Long id){

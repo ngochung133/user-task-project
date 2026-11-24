@@ -1,71 +1,59 @@
 # Role — ngữ cảnh triển khai
 
-Đối chiếu ngày 2026-11-10, HEAD `7189352` (`Role`). Nội dung dưới đây được xác nhận bằng mã nguồn; chưa chạy kiểm thử Role qua HTTP/MySQL.
+Đối chiếu tĩnh ngày 2026-11-23, HEAD `0232bac` (`project v1`). Mô tả mã và assertion trong test, chưa xác nhận suite hoặc HTTP/MySQL thành công trên HEAD này. Xem [trạng thái kiểm thử](../../../../../../../../docs/PROJECT-STATUS.md).
 
 ## Mục đích
 
-Quản lý Role và tập Permission được gán cho Role. Module hiện có tạo, cập nhật, xóa và list có lọc/phân trang. Việc lưu liên kết Role–Permission chưa được tích hợp vào phân quyền của ứng dụng.
-
-Điểm vào: [RoleController](RoleController.java) → [RoleService](RoleService.java) → [RoleServiceImpl](RoleServiceImpl.java) → [RoleRepository](RoleRepository.java). Bố cục package theo [ADR-003](../../../../../../../../docs/decisions/003-feature-package-layout.md).
+Quản lý Role và toàn bộ tập Permission gán cho Role, cung cấp Role để User tham chiếu và security phân quyền. Điểm vào: [RoleController](RoleController.java) → [RoleService](RoleService.java) → [RoleServiceImpl](RoleServiceImpl.java) → [RoleRepository](RoleRepository.java). Package theo [ADR-003](../../../../../../../../docs/decisions/003-feature-package-layout.md).
 
 ## Quyết định và lý do
 
-### Hợp đồng hiện có trong mã
+### Hợp đồng hiện tại trong mã
 
-Các endpoint dùng `/api/v1/roles`, bọc kết quả bằng [ApiResponse](../../dto/ApiResponse.java). [SecurityConfig](../../config/SecurityConfig.java) áp dụng `anyRequest().authenticated()` cho Role, chưa kiểm tra quyền quản trị hoặc Permission.
+Base path `/api/v1/roles`, response qua [ApiResponse](../../dto/ApiResponse.java). Mọi thao tác cần Bearer JWT và Permission đúng method/path theo [SecurityConfig](../../config/SecurityConfig.java), [PermissionAuthorizationManager](../../security/PermissionAuthorizationManager.java); tên Role `ADMIN` tự nó không tạo ngoại lệ bỏ qua kiểm tra Permission trong manager.
 
-| Method và path | Xử lý hiện tại | Thành công |
+| Method và path | Xử lý | Thành công theo controller |
 |---|---|---|
-| `POST /api/v1/roles` | Nhận `RoleRequestDTO`, kiểm tra tên trùng và Permission ID trước khi tạo. | 201, `RoleResponseDTO` |
-| `PUT /api/v1/roles/{id}` | Dùng ID trên URL; thay name, description và toàn bộ tập Permission. | 200, `RoleResponseDTO` |
-| `DELETE /api/v1/roles/{id}` | Tìm Role trước khi gọi `deleteById`. | 200, `data` là `Delete successfully` |
-| `GET /api/v1/roles` | Nhận `Pageable` và `RoleFilterDTO`, trả trang Role. | 200, `PageResponseDTO<RoleResponseDTO>` |
+| `POST /api/v1/roles` | Tạo Role, gán Permission | 201, `RoleResponseDTO` |
+| `GET /api/v1/roles` | Lọc/phân trang | 200, `PageResponseDTO<RoleResponseDTO>` |
+| `GET /api/v1/roles/{id}` | Tìm theo ID | 200, `RoleResponseDTO` |
+| `PUT /api/v1/roles/{id}` | ID trên URL, thay name/description và toàn bộ quyền | 200, `RoleResponseDTO` |
+| `DELETE /api/v1/roles/{id}` | Kiểm tra tồn tại, xóa và flush | 200, chuỗi `Delete successfully` trong `data` |
 
-Chưa có `GET /api/v1/roles/{id}`. Nguồn: [controller](RoleController.java).
+[RoleRequestDTO](dto/RoleRequestDTO.java) là record chung POST/PUT. Name/description không trắng, tối đa 255 ký tự; `permissionIds` không null, từng ID không null và dương; tập rỗng hợp lệ. Cả POST/PUT dùng `@Valid`. [RoleResponseDTO](dto/RoleResponseDTO.java) gồm `id`, `name`, `description`, **`permissions`** (danh sách PermissionResponseDTO), `createdAt`, `updatedAt`; không còn field viết sai `permisisons`. Timestamp cuối lấy từ entity `updateAt`. Danh sách quyền chưa được sắp xếp.
 
-- [RoleRequestDTO](dto/RoleRequestDTO.java) là record dùng chung cho create/update. `name`, `description` có `@NotBlank`; `permissionIds` là `Set<@Positive @NotNull Long>` với `@NotNull` trên tập. Tập rỗng hợp lệ, thiếu/null tập không hợp lệ. DTO chưa có `@Size`, mặc dù cột name/description giới hạn 255 ký tự. Cả POST và PUT dùng `@Valid`.
-- [RoleResponseDTO](dto/RoleResponseDTO.java) có `id`, `name`, `description`, **`permisisons`**, `createdAt`, `updatedAt`. `permisisons` là tên viết sai đang tồn tại trong record, chứa danh sách `PermissionResponseDTO`, không chỉ ID. `fromEntity()` đọc quan hệ Permission và lấy `role.getUpdateAt()` cho `updatedAt`. Chưa có bước sắp xếp danh sách quyền.
-- [PageResponseDTO](../../dto/PageResponseDTO.java) trả `content`, `page`, `size`, `totalElements`, `totalPages`, `hasNext`, `hasPrevious`; page trả ra bắt đầu từ 1. [Cấu hình HTTP](../../../../../../../../src/main/resources/application.yml) dùng page bắt đầu từ 1, size mặc định 10, tối đa 100. Role chưa tự đặt sort mặc định hoặc tiêu chí phụ.
-- [GlobalExceptionHandler](../../exception/GlobalExceptionHandler.java) ánh xạ validation thành 400, `ResourceNotFoundException` thành 404 và `ResourceAlreadyExistException` thành 409. Đây là luồng xử lý theo mã, chưa phải kết quả HTTP Role đã chạy.
+### Kiểm tra ID và transaction
 
-### Kiểm tra đầy đủ Permission trước khi ghi
+[Service](RoleServiceImpl.java) kiểm tra tên bằng `existsByName` khi tạo, `existsByNameAndIdNot` khi cập nhật để cho phép giữ tên chính bản ghi. Không trim/chuẩn hóa tên hoặc mô tả trước lưu. Cả create/update tải Permission bằng `findAllById`, trừ ID tìm thấy khỏi tập yêu cầu, nếu còn ID thiếu thì ném `ResourceNotFoundException` **trước khi gán field và lưu Role**. Sau đó gán `new HashSet<>(permissions)`; PUT với tập rỗng xóa toàn bộ liên kết quyền, không yêu cầu xóa Permission.
 
-[RoleServiceImpl](RoleServiceImpl.java) dùng constructor injection qua `@RequiredArgsConstructor`, với hai dependency `final`: `RoleRepository` và `PermissionRepository`.
+Create/update dùng `saveAndFlush`; delete dùng `deleteById` rồi `flush`. Các phương thức ghi có `@Transactional`, get/list dùng `readOnly=true` để ánh xạ quan hệ LAZY trong service. [Advice](../../exception/GlobalExceptionHandler.java) trả `400` cho validation, `404` khi thiếu Role/Permission, `409` cho trùng tên đã phát hiện và lỗi ràng buộc DB; filter chain xử lý `401/403`.
 
-- Create kiểm tra `existsByName`; update tìm Role rồi kiểm tra `existsByNameAndIdNot`, cho phép giữ tên của chính bản ghi nếu không trùng Role khác.
-- Cả hai tải Permission bằng `findAllById`, sao chép ID yêu cầu vào `HashSet`, rồi loại các ID tìm thấy. Nếu còn ID thiếu, ném `ResourceNotFoundException` trước khi gán field và lưu Role. Create hiện viết tên tài nguyên lỗi là `Permisison`; update dùng `Permission`.
-- Khi đủ ID, service gán `new HashSet<>(permissions)` và `saveAndFlush`. Cách thay thế tập thể hiện PUT thay toàn bộ quyền; truyền tập rỗng sẽ gán tập quyền rỗng.
-- Create/update/delete có `@Transactional`; list có `@Transactional(readOnly = true)`. Mapping response diễn ra trong phương thức service, nên có phạm vi transaction để đọc collection LAZY. Transaction và thứ tự kiểm tra nhằm giữ thao tác gán quyền trong cùng giao dịch; commit/rollback thực tế chưa có test xác nhận.
+### Mapping, User và cache
 
-### Mapping và chiều sở hữu quan hệ
+[Role](Role.java) map `roles`, Long/IDENTITY, unique tên, name/description không null/dài 255; audit `Instant createdAt/updateAt` do Hibernate quản lý. Role sở hữu ManyToMany LAZY `role_permission` với `@BatchSize(50)`, không cascade REMOVE sang Permission. [V1](../../../../../../../../src/main/resources/db/migration/V1__init_schema.sql) tạo unique tên, hai FK và PK ghép của bảng nối. Bảng Role dùng collation `utf8mb4_0900_ai_ci`, nên phạm vi unique còn phụ thuộc so sánh hoa/thường/dấu tại DB. Chưa xác minh migration/schema đang chạy.
 
-[Role](Role.java) map bảng `roles`: ID `Long`/IDENTITY; name, description không null, dài tối đa 255; unique constraint trên name. `createdAt` dùng `@CreationTimestamp`, field **`updateAt`** dùng `@UpdateTimestamp`, cả hai là `Instant`.
+[User](../user/User.java) sở hữu liên kết `user_role` tới Role. Service Role không chủ động gỡ Role khỏi User trước xóa; FK V1 không có ON DELETE CASCADE và advice chung ánh xạ vi phạm FK thành 409. [CustomerDetailService](../../security/CustomerDetailService.java) sinh authority `ROLE_` + tên Role; [AuthServiceImpl](../auth/AuthServiceImpl.java) đặt danh sách Role vào JWT, register tìm Role `USER` trong DB.
 
-Role sở hữu `@ManyToMany(fetch = LAZY)` qua `role_permission`, cột `role_id` và `permission_id` được khai báo không null. Collection là `Set<Permission>`, khởi tạo bằng `HashSet`, có `@BatchSize(size = 50)`. Mapping không khai báo cascade REMOVE; thao tác Role không chủ động xóa Permission ở đầu kia. Chưa kiểm chứng SQL xóa bảng nối, FK hoặc khóa ghép trên database thật; không suy ra schema hiện hành chỉ từ annotation.
+Service gọi `PermissionAuthorizationManager.loadCache()` sau mỗi ghi/flush nhưng **trước khi transaction commit**. [RoleRepository.findAllWithPermissions](RoleRepository.java) dùng `JOIN FETCH r.permissions` để nạp Role có quyền cho cache theo tên authority; Role không có Permission không xuất hiện trong kết quả join này. Cache trong tiến trình không thay Role claim của token đã cấp; service không chủ động thu hồi JWT khi đổi tên/quyền/xóa Role. Tính nhất quán cache khi rollback/ghi đồng thời và thời điểm quyền mới có hiệu lực cần kiểm chứng/chốt. [Tài liệu lựa chọn AuthorizationManager](../../../../../../../../docs/decisions/003-authorization-permission-strategy.md) ghi lý do đặt kiểm tra method/path trong filter chain, không thay thế các kiểm chứng này.
 
-### Bộ lọc
+### Bộ lọc và phân trang
 
-[RoleFilterDTO](dto/RoleFilterDTO.java) nhận name, description và tập permissionIds. [RoleSpecification](RoleSpecification.java) kết hợp các điều kiện bằng AND:
+[RoleFilterDTO](dto/RoleFilterDTO.java)/[RoleSpecification](RoleSpecification.java) ghép AND: name trim rồi so bằng; description trim/lowercase rồi LIKE chứa chuỗi (chưa chỉ định `Locale.ROOT`, chưa escape wildcard); mỗi Permission ID tạo một join và predicate để yêu cầu có đủ các ID đó. Tập ID rỗng/null bỏ lọc, không có nghĩa yêu cầu Role không quyền. Chưa kiểm chứng count/phân trang khi join nhiều ID.
 
-- Name: bỏ khoảng trắng hai đầu rồi so bằng; không chuẩn hóa hoa/thường trong Java, kết quả còn phụ thuộc collation DB.
-- Description: lowercase và trim đầu vào, so LIKE với `%giá trị%` trên `lower(description)`. Chưa escape ký tự wildcard `%`/`_`, và `toLowerCase()` chưa chỉ định locale.
-- Permission IDs: null/rỗng bỏ điều kiện. Mỗi ID tạo một join `permissions` và điều kiện bằng, rồi AND các điều kiện để yêu cầu đủ các quyền đó; không yêu cầu tập quyền của Role chỉ có các ID này. Chưa kiểm chứng SQL, count và phân trang khi lọc nhiều ID.
+[Cấu hình HTTP](../../../../../../../../src/main/resources/application.yml) đặt page từ 1, size mặc định 10, tối đa 100. [PageResponseDTO](../../dto/PageResponseDTO.java) trả `content/page/size/totalElements/totalPages/hasNext/hasPrevious`; service chưa thêm sort mặc định/tiêu chí phụ.
 
 ## Phụ thuộc
 
-- Module Permission: [Permission](../permission/Permission.java), [PermissionRepository](../permission/PermissionRepository.java) và [PermissionResponseDTO](../permission/dto/PermissionResponseDTO.java). Role tham chiếu dữ liệu Permission hiện có, không tự tạo Permission.
-- Spring MVC, Jakarta Validation, Spring Data JPA/Specification, transaction của Spring và Hibernate/MySQL; DTO phân trang, envelope và exception dùng chung ở cấp ứng dụng.
-- Quy tắc thay đổi mới: [PROJECT-RULES](../../../../../../../../docs/PROJECT-RULES.md). Hợp đồng/schema đích: [API_SPEC](../../../../../../../../docs/API_SPEC.md), [DATABASE](../../../../../../../../docs/DATABASE.md). Hai tài liệu này vẫn đặt Role trong phần đích; phần hiện trạng ở đây phản ánh mã đã có, chưa xác nhận đã hoàn tất thiết kế đích.
+- Service tiêm RoleRepository, PermissionRepository và PermissionAuthorizationManager. [PermissionServiceImpl](../permission/PermissionServiceImpl.java) cũng reload cache khi thay đổi quyền, dùng RoleRepository gián tiếp qua manager.
+- [UserServiceImpl](../user/UserServiceImpl.java) kiểm tra và gán Role; Auth dùng Role cho register và token; [DatabaseSeeder](../../config/DatabaseSeeder.java) khởi tạo Role khi bật seed, [DashboardServiceImpl](../dashboard/DashboardServiceImpl.java) đếm Role. DTO/exception/security chung nằm ở cấp ứng dụng.
 
 ## Giới hạn
 
-- Chưa có test Role trong [cây test](../../../../../../../../src/test/java/com/example/hrmanagement/). Không dùng kết quả User/Auth/OpenAPI để kết luận Role hoạt động đúng.
-- Chưa chuẩn hóa name/description trước khi lưu; unique tên có trong mapping nhưng phạm vi duy nhất, chính sách hoa/thường/khoảng trắng chưa được chốt trong tài liệu. Chưa có xử lý riêng vi phạm unique constraint khi ghi đồng thời; advice hiện bắt lỗi chung thành 500.
-- Entity hiện dùng setter và constructor Lombok công khai; chưa theo quy ước mới về constructor JPA protected và phương thức nghiệp vụ. Đây là hiện trạng cần lưu ý khi sửa, không phải ngoại lệ quy ước đã được duyệt.
-- Chưa có GET theo ID, sort ổn định, allowlist sort hoặc giới hạn độ dài request phù hợp với cột DB. Cần chốt tên field response `permisisons` trước khi đổi vì ảnh hưởng hợp đồng JSON.
-- Chưa có User–Role hoặc kiểm tra quyền theo dữ liệu. Chính sách xóa Permission đang được Role tham chiếu chưa được xử lý trong module Permission. Các nội dung này còn cần thiết kế/triển khai riêng.
-- Khi được giao bổ sung test, cần kiểm tra ID Permission thiếu khiến toàn bộ create/update thất bại; update thay thế/xóa tập quyền không xóa Permission; trùng tên; validation; xóa Role; lọc nhiều quyền và phân trang. Kiểm tra commit/rollback qua HTTP hoặc bean Spring ngoài transaction do test quản lý, dùng MySQL Testcontainers theo quy ước repo. Đây là phạm vi kiểm thử dự kiến, chưa có kết quả chạy.
+- **Đã có test, chưa chạy lại:** [RoleServiceTest](../../../../../../../../src/test/java/com/example/hrmanagement/service/RoleServiceTest.java) mock repository/manager cho CRUD, trùng tên, create thiếu ID, cập nhật quyền và gọi reload. [RoleControllerIntegrationTest](../../../../../../../../src/test/java/com/example/hrmanagement/controller/RoleControllerIntegrationTest.java) có assertion GET theo ID, field `permissions`, thay tập quyền rỗng, xóa không xóa Permission, create thiếu ID không thêm Role và 400/409/401/403. Các case chạy trong transaction do test quản lý; không chứng minh riêng commit/rollback, update với ID thiếu hoặc hiệu lực cache sau commit. Chưa có báo cáo integration mới; xem PROJECT-STATUS về lệch XML/`.txt` unit.
+- **Cần chốt/kiểm chứng:** unique/chuẩn hóa tên, sort ổn định và filter nhiều Permission; xóa Role còn User; quyền gán Role và tác động đổi tên/quyền tới JWT đang còn hạn; cache với transaction và nhiều instance. Không coi verify `loadCache()` trong unit test là bằng chứng phân quyền đã đúng sau commit/rollback.
+- **Quy ước thay đổi mới:** theo [PROJECT-RULES](../../../../../../../../docs/PROJECT-RULES.md) về DTO/entity, constraint/migration và MySQL Testcontainers. Entity Role hiện dùng setter/constructor công khai, chưa theo đầy đủ quy ước entity mới. [API_SPEC](../../../../../../../../docs/API_SPEC.md) còn đặt Role trong nhóm đích, [ARCHITECTURE](../../../../../../../../docs/ARCHITECTURE.md) còn mô tả chưa có RBAC; [DATABASE](../../../../../../../../docs/DATABASE.md) mô tả V1 và thiết kế đích. Dùng mã để biết hiện trạng, chốt thay đổi hợp đồng riêng trước phần phụ thuộc.
 
 ## Refactor Log
 
 - **2026-11-10:** Tạo context từ mã Role tại commit `7189352`, đối chiếu API/schema, ADR-003 và cây test. Ghi lại hợp đồng hiện tại, kiểm tra đủ Permission trước khi ghi, quyền sở hữu bảng nối và các phần còn mở. Chỉ thêm tài liệu; không thay đổi hành vi hoặc chạy Maven/HTTP/MySQL trong phiên này.
+- **2026-11-23:** Đồng bộ GET theo ID, response `permissions`, giới hạn request 255 ký tự, User–Role, RBAC và test đã thêm. Giữ riêng kiểm tra ID trước lưu với bằng chứng commit/rollback còn thiếu và cache reload trước commit. Đối chiếu tĩnh HEAD `0232bac`, mã/test, API/schema và ADR liên quan; giữ mục lịch sử 2026-11-10. Chỉ cập nhật CONTEXT, không sửa source hoặc chạy build/test/HTTP.

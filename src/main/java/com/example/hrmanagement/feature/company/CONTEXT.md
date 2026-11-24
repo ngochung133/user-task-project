@@ -1,60 +1,54 @@
 # Company — ngữ cảnh triển khai
 
-Đối chiếu ngày 2026-11-10, HEAD `7189352` (`Role`). Nội dung dưới đây được xác nhận bằng mã nguồn và kiểm thử tích hợp OpenAPI hiện có; chưa có bộ test JUnit/MySQL Testcontainers riêng cho CRUD Company.
+Đối chiếu tĩnh ngày 2026-11-23, HEAD `0232bac` (`project v1`). Nội dung mô tả mã và assertion trong test, chưa xác nhận HTTP/MySQL thành công trên HEAD này. Xem [trạng thái và bằng chứng kiểm thử](../../../../../../../../docs/PROJECT-STATUS.md).
 
 ## Mục đích
 
-Quản lý thông tin công ty (`name`, `description`, `address`, `logo`) với các thao tác tạo, cập nhật, xóa và danh sách có lọc/phân trang. Quan hệ nhân sự thuộc công ty (`User` → `Company`) thuộc roadmap tiếp theo và chưa được nối vào module này.
-
-Điểm vào: [CompanyController](CompanyController.java) → [CompanyService](CompanyService.java) → [CompanyServiceImpl](CompanyServiceImpl.java) → [CompanyRepository](CompanyRepository.java). Bố cục package theo [ADR-003](../../../../../../../../docs/decisions/003-feature-package-layout.md).
+Quản lý công ty (`name`, `description`, `address`, `logo`) để User tham chiếu. Điểm vào: [CompanyController](CompanyController.java) → [CompanyService](CompanyService.java) → [CompanyServiceImpl](CompanyServiceImpl.java) → [CompanyRepository](CompanyRepository.java). Package theo [ADR-003](../../../../../../../../docs/decisions/003-feature-package-layout.md).
 
 ## Quyết định và lý do
 
-### Hợp đồng hiện có trong mã
+### Hợp đồng hiện tại trong mã
 
-Các endpoint đặt dưới `/api/v1/companies`, trả JSON qua [ApiResponse](../../dto/ApiResponse.java). Theo [SecurityConfig](../../config/SecurityConfig.java), mọi route `/api/v1/companies/**` đi qua `anyRequest().authenticated()` (yêu cầu Bearer JWT, chưa phân quyền theo Role/Permission). Hành vi từ chối request ẩn danh (`401`) trên `GET /api/v1/companies` và sự xuất hiện trên tài liệu OpenAPI được xác nhận trong [OpenApiIntegrationTest](../../../../../../../../src/test/java/com/example/hrmanagement/controller/OpenApiIntegrationTest.java#L36-L53).
+Base path `/api/v1/companies`, trả [ApiResponse](../../dto/ApiResponse.java). Mọi thao tác yêu cầu Bearer JWT và Permission đúng method/path theo [SecurityConfig](../../config/SecurityConfig.java), [PermissionAuthorizationManager](../../security/PermissionAuthorizationManager.java); chỉ có token chưa đủ quyền truy cập.
 
-| Method và path | Xử lý hiện tại | Thành công |
+| Method và path | Xử lý | Thành công theo controller |
 |---|---|---|
-| `POST /api/v1/companies` | Nhận `@Valid CompanyRequestDTO`, kiểm tra trùng `name` trước khi lưu. | 201, `CompanyResponseDTO` |
-| `PUT /api/v1/companies/{id}` | Dùng `id` trên path và `@Valid CompanyRequestDTO`; cập nhật 4 trường. | 200, `CompanyResponseDTO` |
-| `DELETE /api/v1/companies/{id}` | Tìm Company theo `id` trước khi gọi `deleteById`. | 200, `data` là `Delete successfully` |
-| `GET /api/v1/companies` | Nhận `Pageable` và `@ModelAttribute CompanyFilterDTO`, trả trang Company. | 200, `PageResponseDTO<CompanyResponseDTO>` |
+| `POST /api/v1/companies` | Tạo từ `@Valid CompanyRequestDTO` | 201, `CompanyResponseDTO` |
+| `GET /api/v1/companies` | Lọc/phân trang | 200, `PageResponseDTO<CompanyResponseDTO>` |
+| `GET /api/v1/companies/{id}` | Tìm theo ID | 200, `CompanyResponseDTO` |
+| `PUT /api/v1/companies/{id}` | ID trên URL, thay bốn field | 200, `CompanyResponseDTO` |
+| `DELETE /api/v1/companies/{id}` | Kiểm tra tồn tại rồi xóa | 200, chuỗi `Delete successfully` trong `data` |
 
-Chưa có `GET /api/v1/companies/{id}`. Nguồn: [controller](CompanyController.java), [API_SPEC.md](../../../../../../../../docs/API_SPEC.md#company-đang-triển-khai).
+[CompanyRequestDTO](dto/CompanyRequestDTO.java) là record dùng chung POST/PUT; cả bốn field không trắng và tối đa 255 ký tự. [CompanyResponseDTO](dto/CompanyResponseDTO.java) gồm `id`, bốn field trên, `createdAt`, `updatedAt`, ánh xạ trực tiếp qua `fromEntity()`; không chứa danh sách User.
 
-- [CompanyRequestDTO](dto/CompanyRequestDTO.java) là Java `record` dùng chung cho POST và PUT. Cả 4 thành phần `name`, `description`, `address`, `logo` đều có `@NotBlank` và `@Size(max = 255)` với thông báo tiếng Việt.
-- [CompanyResponseDTO](dto/CompanyResponseDTO.java) là `record` gồm `id`, `name`, `description`, `address`, `logo`, `createdAt`, `updatedAt`, ánh xạ qua `CompanyResponseDTO.fromEntity(Company)`.
-- [PageResponseDTO](../../dto/PageResponseDTO.java) bọc kết quả phân trang (`content`, `page` bắt đầu từ 1, `size`, `totalElements`, `totalPages`, `hasNext`, `hasPrevious`).
-- [GlobalExceptionHandler](../../exception/GlobalExceptionHandler.java) trả 400 kèm `details` cho lỗi `@Valid`, 404 cho `ResourceNotFoundException` và 409 cho `ResourceAlreadyExistException`.
+### Nghiệp vụ, transaction và FK
 
-### Nghiệp vụ, mapping và bộ lọc
+[Service](CompanyServiceImpl.java) dùng `existsByName` khi tạo, `existsByNameAndIdNot` khi sửa để cho phép giữ nguyên tên của chính Company. Tên trùng phát hiện trước lưu ném `ResourceAlreadyExistException`; create/update dùng `saveAndFlush`, các phương thức ghi có `@Transactional`, list/get dùng `readOnly=true`. Chưa trim/chuẩn hóa giá trị trước khi lưu. Lỗi update giữ nguyên tên trong context cũ đã được sửa ở mức mã và có test tương ứng.
 
-- [CompanyServiceImpl](CompanyServiceImpl.java) tiêm `CompanyRepository` qua `@RequiredArgsConstructor`. Các phương thức `create`, `update`, `delete`, `getAll` hiện chưa đặt `@Transactional`.
-- `create` kiểm tra `existsByName(request.name())` và `saveAndFlush`.
-- `update` tìm bản ghi theo `id`, nhưng kiểm tra trùng tên lại dùng `existsByName(request.name())` thay vì loại trừ `id` hiện tại, khiến cập nhật giữ nguyên tên công ty bị ném `ResourceAlreadyExistException` (`409`).
-- [Company](Company.java) map bảng `companies` với unique constraint trên cột `name`. `id` kiểu `Long` (`GenerationType.IDENTITY`). Bốn cột `name`, `description`, `address`, `logo` khai báo `nullable = false, length = 255`. Hai trường `createdAt` (`@CreationTimestamp`) và `updatedAt` (`@UpdateTimestamp`) kiểu `Instant` (đang khai báo `@Column(nullable = false, length = 255)`).
-- [CompanyFilterDTO](dto/CompanyFilterDTO.java) là `record(String name, String description, String logo, String address)`. [CompanySpecification](CompanySpecification.java) hiện có các helper `static` (`equalIfPresent`, `containsIgnoreCase`), còn các hàm `hasName`, `hasDescription`, `hasLogo`, `hasAddress` là phương thức instance nên `CompanyServiceImpl.getAll` khởi tạo `new CompanySpecification()` rồi ghép bằng `Specification.allOf(...)`:
-  - `name`, `description`: `trim().toLowerCase(Locale.ROOT)` và so `LIKE` (`%giá trị%`) không phân biệt hoa/thường.
-  - `logo`, `address`: `trim()` và so bằng (`cb.equal`).
+[Company](Company.java) map `companies`: Long/IDENTITY, bốn cột không null/dài 255, unique tên và hai timestamp `Instant` do Hibernate quản lý. [V1](../../../../../../../../src/main/resources/db/migration/V1__init_schema.sql) tạo bảng cùng unique tên; collation bảng là `utf8mb4_0900_ai_ci`, ảnh hưởng so sánh tên hoa/thường/dấu. [User](../user/User.java) sở hữu quan hệ Company qua FK `users.company_id` nullable; Company không có collection User hoặc logic chuyển/xóa nhân sự.
+
+DELETE gọi repository, không chủ động xử lý User đang tham chiếu. FK V1 không khai báo ON DELETE CASCADE; [GlobalExceptionHandler](../../exception/GlobalExceptionHandler.java) ánh xạ `DataIntegrityViolationException` thành `409`, cùng nhóm lỗi với unique constraint. Đây là cơ chế hiện hữu, chưa phải chính sách xóa/ngừng hoạt động Company đã được chốt. Lỗi validation là `400`, thiếu tài nguyên `404`; filter chain xử lý `401/403`.
+
+### Lọc, phân trang và logo
+
+[CompanySpecification](CompanySpecification.java) có helper static: name/description trim, lowercase `Locale.ROOT` rồi so LIKE chứa chuỗi; logo/address trim và so bằng. [CompanyFilterDTO](dto/CompanyFilterDTO.java) nhận đúng bốn field này, các điều kiện ghép AND; chuỗi null/trắng bỏ điều kiện. [Cấu hình HTTP](../../../../../../../../src/main/resources/application.yml) đặt page từ 1, size mặc định 10, tối đa 100. [PageResponseDTO](../../dto/PageResponseDTO.java) trả `content/page/size/totalElements/totalPages/hasNext/hasPrevious`. Service chưa bổ sung sort mặc định hay tiêu chí phụ.
+
+`logo` được lưu như chuỗi request, không kiểm tra file tồn tại và không gọi FileService. [FileController](../file/FileController.java)/[FileServiceImpl](../file/FileServiceImpl.java) đã có luồng upload riêng; việc client dùng tên upload cho logo không được Company service ràng buộc. [ADR-002](../../../../../../../../docs/decisions/002-file-upload-strategy.md) vẫn là đề xuất, nhất là quyền đọc/vòng đời file; không coi toàn bộ ADR đã được áp dụng.
 
 ## Phụ thuộc
 
-- Module nghiệp vụ độc lập: hiện không phụ thuộc và chưa bị module nào trong `feature/` phụ thuộc trực tiếp.
-- Spring MVC, Jakarta Validation, Spring Data JPA/Specification, Hibernate/MySQL; [ApiResponse](../../dto/ApiResponse.java), [PageResponseDTO](../../dto/PageResponseDTO.java) và các exception dùng chung ở `exception/`.
-- Quy ước và thiết kế đích: [PROJECT-RULES.md](../../../../../../../../docs/PROJECT-RULES.md), [API_SPEC.md](../../../../../../../../docs/API_SPEC.md), [DATABASE.md](../../../../../../../../docs/DATABASE.md).
+- Service chỉ tiêm CompanyRepository; dùng Spring MVC, Validation, JPA/Specification, transaction và DTO/exception dùng chung.
+- [UserServiceImpl](../user/UserServiceImpl.java) dùng CompanyRepository để gán công ty, [UserResponseDTO](../user/dto/UserResponseDTO.java) đọc ID/tên. [DashboardServiceImpl](../dashboard/DashboardServiceImpl.java) đếm Company.
+- Schema qua Flyway và Hibernate `validate`; [DATABASE](../../../../../../../../docs/DATABASE.md) nêu quy trình migration, không thay thế bằng chứng schema đang chạy.
 
 ## Giới hạn
 
-- **Lỗi cập nhật giữ nguyên tên (`409`):** [CompanyServiceImpl.update](CompanyServiceImpl.java#L37-L39) gọi `existsByName(request.name())` mà chưa loại trừ `id` của chính bản ghi đang sửa (thiếu `existsByNameAndIdNot(String name, Long id)` trong [CompanyRepository](CompanyRepository.java)).
-- **Thiếu `@Transactional` và xử lý xung đột đồng thời:** Các phương thức ghi trong `CompanyServiceImpl` chưa có `@Transactional` theo quy ước. Chưa xử lý riêng lỗi vi phạm unique constraint từ DB khi hai request tạo/sửa trùng tên đồng thời.
-- **Hợp đồng và tính năng còn thiếu so với thiết kế đích:**
-  - Chưa có `GET /api/v1/companies/{id}`.
-  - Chưa có sort mặc định `id ASC` và tiêu chí phụ khi phân trang.
-  - `logo` hiện nhận chuỗi thuần trong JSON; luồng upload file/logo thuộc [ADR-002](../../../../../../../../docs/decisions/002-file-upload-strategy.md) (trạng thái đề xuất, chưa triển khai).
-  - Chưa có quan hệ `User` → `Company` (`company_id`) và chưa chốt chính sách xóa Company khi còn nhân sự trực thuộc ([API_SPEC.md](../../../../../../../../docs/API_SPEC.md#api-hr-đích)).
-- **Kiểm thử:** Ngoài 2 assertion về security/OpenAPI trên `/api/v1/companies` trong [OpenApiIntegrationTest](../../../../../../../../src/test/java/com/example/hrmanagement/controller/OpenApiIntegrationTest.java), chưa có unit test hay integration test cho CRUD/filter Company trong `src/test/`.
+- **Đã có test, chưa chạy lại:** [CompanyServiceTest](../../../../../../../../src/test/java/com/example/hrmanagement/service/CompanyServiceTest.java) mock repository cho CRUD/trùng tên, gồm giữ nguyên tên khi update. [CompanyControllerIntegrationTest](../../../../../../../../src/test/java/com/example/hrmanagement/controller/CompanyControllerIntegrationTest.java) có assertion CRUD, validation, 404/401/403 và `deleteCompanyReferencedByUserReturns409`. Case FK dùng `Propagation.NOT_SUPPORTED` và dọn dữ liệu riêng để quan sát kết thúc transaction service; các case còn lại nằm trong transaction test. Chưa có báo cáo integration mới, không kết luận pass từ assertion có sẵn. Xem PROJECT-STATUS về lệch XML/`.txt` của báo cáo unit.
+- **Cần chốt/kiểm chứng:** sort ổn định, chuẩn hóa/phạm vi unique tên, ghi đồng thời, chính sách Company còn User và dọn file logo sau thay/xóa hoặc upload chưa gắn bản ghi. Hiện lỗi FK dựa vào constraint/advice, chưa có hành vi chuyển User hay xóa mềm Company.
+- **Quy ước thay đổi mới:** [PROJECT-RULES](../../../../../../../../docs/PROJECT-RULES.md) yêu cầu entity hạn chế setter, sort ổn định và test MySQL; entity hiện dùng setter và constructor Lombok công khai. [API_SPEC](../../../../../../../../docs/API_SPEC.md) còn để một phần Company trong nhóm đích và [ARCHITECTURE](../../../../../../../../docs/ARCHITECTURE.md) còn mô tả module tương lai; lấy mã ở trên làm hiện trạng, chốt thiết kế riêng trước thay đổi hợp đồng.
 
 ## Refactor Log
 
 - **2026-11-10:** Tạo `CONTEXT.md` từ mã nguồn tại HEAD `7189352`, đối chiếu với [OpenApiIntegrationTest](../../../../../../../../src/test/java/com/example/hrmanagement/controller/OpenApiIntegrationTest.java), [API_SPEC.md](../../../../../../../../docs/API_SPEC.md), [DATABASE.md](../../../../../../../../docs/DATABASE.md) và [PROJECT-STATUS.md](../../../../../../../../docs/PROJECT-STATUS.md). Ghi nhận hợp đồng hiện có, lỗi `409` khi update giữ nguyên tên và các phần chờ hoàn thiện.
+- **2026-11-23:** Đồng bộ GET theo ID, RBAC, transaction, kiểm tra trùng loại ID hiện tại, quan hệ User–Company và test đã thêm. Ghi riêng cơ chế lỗi FK/409 hiện có với chính sách xóa/logo còn cần chốt. Đối chiếu tĩnh HEAD `0232bac`, mã/test, API/schema và ADR liên quan; giữ mục lịch sử 2026-11-10. Chỉ cập nhật CONTEXT, không sửa source hoặc chạy build/test/HTTP.

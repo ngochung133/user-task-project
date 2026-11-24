@@ -201,6 +201,29 @@ class AuthControllerIntegrationTest {
         }
 
         @Test
+        @DisplayName("GET /api/v1/auth/me yêu cầu xác thực (401 khi thiếu JWT)")
+        void meRequiresAuthentication() throws Exception {
+            mockMvc.perform(get("/api/v1/auth/me"))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.statusCode").value(401));
+        }
+
+        @Test
+        @DisplayName("GET /api/v1/auth/me trả về thông tin user hiện tại kể cả khi role không có quyền /auth/me trong RBAC")
+        void meReturnsCurrentUserForAnyAuthenticatedRole() throws Exception {
+            String accessToken = authTestHelper.createAccessToken("me@example.com", "123456", Set.of(userRole));
+
+            mockMvc.perform(get("/api/v1/auth/me")
+                            .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.statusCode").value(200))
+                    .andExpect(jsonPath("$.message").value("Get current user successfully"))
+                    .andExpect(jsonPath("$.data.email").value("me@example.com"))
+                    .andExpect(jsonPath("$.data.name").value("test"))
+                    .andExpect(jsonPath("$.data.roleInfo[0].name").value("USER"));
+        }
+
+        @Test
         @DisplayName("Register từ chối mật khẩu vượt quá 72 byte UTF-8 với 400")
         void registerRejectsPasswordOver72Bytes() throws Exception {
             String tooLongPassword = "a".repeat(73);

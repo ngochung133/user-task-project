@@ -13,6 +13,7 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import com.example.hrmanagement.dto.ApiResponse;
 
@@ -65,6 +66,12 @@ public class GlobalExceptionHandler {
    public ResponseEntity<ApiResponse<Void>> handleInvalidToken(InvalidTokenException ex) {
       log.warn("InvalidTokenException: {}", ex.getMessage());
       return ApiResponse.unauthorized(ex.getMessage());
+   }
+
+   @ExceptionHandler(NoResourceFoundException.class)
+   public ResponseEntity<ApiResponse<Void>> handleNoResourceFound(NoResourceFoundException ex) {
+      log.warn("NoResourceFoundException: {} {}", ex.getHttpMethod(), ex.getResourcePath());
+      return ApiResponse.notFound("Không tìm thấy tài nguyên");
    }
 
    @ExceptionHandler(Exception.class)
